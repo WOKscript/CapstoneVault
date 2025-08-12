@@ -1,0 +1,15 @@
+{# templates/core/revise_paper.html #}
+{% extends 'core/base.html' %}
+{% block content %}
+  <h3>Request Revision for: {{ paper.title }}</h3>
+
+  <form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+      {{ form.feedback.label_tag }}
+      {{ form.feedback }}
+    </div>
+    <button type="submit" class="btn btn-warning">Submit for Revision</button>
+    <a href="{% url 'adviser_pending_papers' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+{% endblock %}

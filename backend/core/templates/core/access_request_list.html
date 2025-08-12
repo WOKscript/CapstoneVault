@@ -1,0 +1,68 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Access Requests</h3>
+    <span class="text-muted small">Manage and review paper view requests</span>
+  </div>
+
+  {% if requests %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle">
+        <thead class="table-dark">
+          <tr class="text-center">
+            <th>User</th>
+            <th>Paper</th>
+            <th>Reason</th>
+            <th>Address</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Requested At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr>
+            <td class="fw-semibold">{{ req.user.get_full_name|default:req.user.username }}</td>
+            <td>{{ req.paper.title }}</td>
+            <td style="max-width: 300px; white-space: pre-wrap;">{{ req.reason }}</td>
+            <td>{{ req.address|default:"—" }}</td>
+            <td>{{ req.phone|default:"—" }}</td>
+            <td class="text-center">
+              {% if req.status == 'approved' %}
+                <span class="badge bg-success px-2 py-1">Approved</span>
+              {% elif req.status == 'rejected' %}
+                <span class="badge bg-danger px-2 py-1">Rejected</span>
+              {% else %}
+                <span class="badge bg-warning text-dark px-2 py-1">Pending</span>
+              {% endif %}
+            </td>
+            <td>{{ req.requested_at|date:"M d, Y - H:i" }}</td>
+            <td class="text-center">
+              {% if req.status == 'pending' %}
+                <div class="btn-group btn-group-sm" role="group">
+                  <a href="{% url 'approve_access_request' req.id %}" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Approve
+                  </a>
+                  <a href="{% url 'reject_access_request' req.id %}" class="btn btn-danger">
+                    <i class="bi bi-x-circle"></i> Reject
+                  </a>
+                </div>
+              {% else %}
+                <span class="text-muted small">No action</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-light border">
+      No access requests have been submitted yet.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

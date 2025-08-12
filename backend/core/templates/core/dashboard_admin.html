@@ -1,0 +1,222 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h3 class="mb-4">Welcome, Admin</h3>
+
+<div class="row g-3 mb-4">
+  <!-- Total Papers -->
+  <div class="col-md-3">
+    <a href="{% url 'capstones_main' %}" class="text-decoration-none">
+      <div class="card text-white bg-primary shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Total Papers</h5>
+          <h3 class="card-text">{{ total_papers }}</h3>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Verified Users -->
+  <div class="col-md-3">
+    <div class="card text-white bg-success shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="card-title">Verified Users</h5>
+        <h3 class="card-text">{{ verified_users }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Requests -->
+  <div class="col-md-3">
+    <a href="{% url 'access_request_list' %}" class="text-decoration-none">
+      <div class="card text-white bg-warning shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Access Requests</h5>
+          <h3 class="card-text">{{ pending_requests }}</h3>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Future: Session Logs -->
+  <div class="col-md-3">
+    <a href="#" class="text-decoration-none">
+      <div class="card text-white bg-danger shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Session Logs</h5>
+          <h3 class="card-text">{{ session_logs }}</h3>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Mini Trends -->
+<style>
+  .mini-chart { min-height: 160px; }
+  .card-link { color: inherit; text-decoration: none; }
+  .card-link .card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1); }
+</style>
+
+<div class="row g-3">
+  <!-- Mini: Papers per Year (donut) -->
+  <div class="col-lg-4 col-md-6">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Yearly Output</h6>
+            <small class="text-muted">view details →</small>
+          </div>
+          <div id="miniYearly" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Mini: Papers by Category (line) -->
+  <div class="col-lg-4 col-md-6">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Category Trend</h6>
+            <small class="text-muted">view details →</small>
+          </div>
+          <div id="miniCategory" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Mini: Most Accessed Papers (by School Year) -->
+  <div class="col-lg-4 col-md-12">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Most Accessed Papers</h6>
+            <small id="miniAyLabel" class="text-muted"></small>
+          </div>
+          <div id="miniMostAccessed" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- ApexCharts CDN -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+(function () {
+  // ------------ helpers ------------
+  async function fetchJSON(url) {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  // Academic year utility (AY starts in August by default)
+  const AY_START_MONTH = 8;
+  function ayFor(date) {
+    const y = date.getFullYear(), m = date.getMonth() + 1;
+    return (m >= AY_START_MONTH) ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+  }
+
+  // Build AY list: current + previous 4
+  const currentAY = ayFor(new Date());
+  const ayList = [];
+  for (let i = 0; i < 5; i++) {
+    const base = parseInt(currentAY.slice(0, 4)) - i;
+    ayList.push(`${base}-${base + 1}`);
+  }
+
+  // Elements
+  const elMiniYearly     = document.querySelector("#miniYearly");
+  const elMiniCategory   = document.querySelector("#miniCategory");
+  const elMiniMostAcc    = document.querySelector("#miniMostAccessed");
+  const elMiniAyLabel    = document.querySelector("#miniAyLabel");
+
+  // ------------ mini: Yearly + Category ------------
+  fetchJSON("{% url 'trends_api' %}")
+    .then(data => {
+      // Yearly Output (donut)
+      new ApexCharts(elMiniYearly, {
+        chart: { type: 'donut', height: 180, sparkline: { enabled: true } },
+        series: data.yearly.counts,
+        labels: data.yearly.labels,
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } }
+      }).render();
+
+      // Category Trend (compact line)
+      new ApexCharts(elMiniCategory, {
+        chart: { type: 'line', height: 180, sparkline: { enabled: true } },
+        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
+        xaxis: { categories: data.stackedByCategory.labels },
+        stroke: { curve: 'smooth', width: 2 },
+        markers: { size: 0 },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } }
+      }).render();
+    })
+    .catch(err => console.error('trends_api error:', err));
+
+  // ------------ mini: Most Accessed Papers (by AY) ------------
+  async function renderMostAccessedForAY(ay) {
+    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
+    const papers = d.topPapers || []; // correct key
+
+    if (!papers.length) return false; // nothing for this AY
+
+    // Truncate long titles for the mini chart
+    const labels = papers.map(p => p.title.length > 22 ? p.title.slice(0, 22) + '…' : p.title);
+    const views  = papers.map(p => p.views);
+
+    // clear previous chart (if any)
+    elMiniMostAcc.innerHTML = '';
+
+    new ApexCharts(elMiniMostAcc, {
+      chart: { type: 'bar', height: 180, sparkline: { enabled: true } },
+      series: [{ name: 'Views', data: views }],
+      xaxis: { categories: labels },
+      plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
+      dataLabels: { enabled: false },
+      tooltip: {
+        y: { formatter: v => v },
+        x: {
+          formatter: (val, { dataPointIndex }) =>
+            papers[dataPointIndex]?.title || val
+        }
+      }
+    }).render();
+
+    // show which AY is being displayed
+    if (elMiniAyLabel) elMiniAyLabel.textContent = ay;
+    return true;
+  }
+
+  (async () => {
+    // Try current AY first; if empty, fall back to the most recent AY with data
+    let rendered = false;
+    for (const ay of ayList) {
+      try {
+        rendered = await renderMostAccessedForAY(ay);
+        if (rendered) break;
+      } catch (e) {
+        console.error('most_accessed_api error for', ay, e);
+      }
+    }
+
+    if (!rendered) {
+      // Nothing in any AY
+      if (elMiniAyLabel) elMiniAyLabel.textContent = currentAY;
+      elMiniMostAcc.innerHTML = '<div class="text-muted small">No views recorded yet.</div>';
+    }
+  })();
+})();
+</script>
+
+{% endblock %}

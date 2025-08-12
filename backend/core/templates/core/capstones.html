@@ -1,0 +1,87 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+  {# Resolve dashboard URL based on role #}
+  {% if request.user.userprofile.role == 'admin' %}
+    {% url 'admin_dashboard' as dashboard_url %}
+  {% elif request.user.userprofile.role == 'adviser' %}
+    {% url 'adviser_dashboard' as dashboard_url %}
+  {% elif request.user.userprofile.role == 'verified' %}
+    {% url 'verified_dashboard' as dashboard_url %}
+  {% else %}
+    {% url 'non_verified_dashboard' as dashboard_url %}
+  {% endif %}
+
+  <style>
+    /* tiny, tasteful polish */
+    .page-header h3 { letter-spacing: .2px; }
+    .cat-card { transition: transform .08s ease, box-shadow .2s ease; }
+    .cat-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.08) !important; }
+    .badge-count { font-weight: 600; }
+    .stretched-link::after { position: static; } /* fix for overflow-hidden parents */
+  </style>
+
+  <!-- Header + Breadcrumb -->
+  <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <h3 class="mb-0">Capstone Categories</h3>
+    {% if categories %}
+      <span class="text-muted small">
+        {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
+      </span>
+    {% endif %}
+  </div>
+
+  <nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{{ dashboard_url }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Categories</li>
+    </ol>
+  </nav>
+
+  {% if categories %}
+    <!-- Responsive, even grid -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+      {% for cat in categories %}
+        <div class="col">
+          <div class="card cat-card h-100 border-0 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex align-items-start justify-content-between mb-2">
+                <h5 class="card-title mb-0">{{ cat.name }}</h5>
+                <span class="badge bg-light text-dark badge-count">
+                  {{ cat.paper_count }} paper{{ cat.paper_count|pluralize }}
+                </span>
+              </div>
+
+              <p class="text-muted small mb-4">
+                Explore approved capstones under {{ cat.name }}.
+              </p>
+
+              <div class="mt-auto">
+                <a href="{% url 'capstones_by_category' cat.slug %}"
+                   class="btn btn-primary w-100 position-relative">
+                  View {{ cat.name }}
+                </a>
+                <!-- Make the whole card clickable without changing visual layout -->
+                <a href="{% url 'capstones_by_category' cat.slug %}" class="stretched-link" aria-label="Open {{ cat.name }}"></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty state -->
+    <div class="text-center py-5">
+      <div class="mb-2">
+        <svg width="64" height="64" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" opacity=".15" d="M5 4h14a1 1 0 0 1 1 1v12H4V5a1 1 0 0 1 1-1z"/>
+          <path fill="currentColor" d="M3 20h18v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>
+        </svg>
+      </div>
+      <h5 class="mb-1">No categories yet</h5>
+      <p class="text-muted mb-3">Once admins create categories, they’ll appear here.</p>
+      <a href="{{ dashboard_url }}" class="btn btn-outline-primary">Back to Dashboard</a>
+    </div>
+  {% endif %}
+{% endblock %}

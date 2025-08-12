@@ -1,0 +1,42 @@
+{% extends 'core/base.html' %}
+
+{% block no_layout %}
+<div class="container d-flex justify-content-center align-items-center min-vh-100 py-5">
+  <div class="w-100" style="max-width: 400px;">
+    <div class="card shadow p-4 w-100">
+      <h2 class="text-center mb-4">Sign In</h2>
+      <form method="post" autocomplete="off">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+        {% endif %}
+
+        <!-- Email -->
+        <div class="mb-3">
+          <label for="id_email" class="form-label">Email</label>
+          <input type="email" name="email" id="id_email"
+                class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                value="{{ form.email.value|default:'' }}" placeholder="Enter your email">
+          {% if form.email.errors %}
+            <div class="text-danger">{{ form.email.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Password -->
+        <div class="mb-3">
+          <label for="id_password" class="form-label">Password</label>
+          <input type="password" name="password" id="id_password"
+                class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                placeholder="Enter your password">
+          {% if form.password.errors %}
+            <div class="text-danger">{{ form.password.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+      </form>
+      <p class="mt-3 text-center">Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

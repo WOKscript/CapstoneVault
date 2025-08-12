@@ -1,0 +1,196 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h3 class="mb-4">Welcome, Non-Verified User</h3>
+
+<div class="alert alert-info">
+  You can only view <strong>abstracts</strong> of capstone papers. To view full papers, please submit a request for access.
+</div>
+
+<a href="{% url 'capstones_main' %}" class="btn btn-success mb-4">Browse Capstone Abstracts</a>
+
+<!-- Recent Requests -->
+<h5>Your Recent Access Requests</h5>
+{% if recent_requests %}
+  <table class="table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Requested At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for request in recent_requests %}
+      <tr>
+        <td>{{ request.paper.title }}</td>
+        <td>
+          {% if request.status == 'approved' %}
+            <span class="badge bg-success">Approved</span>
+          {% elif request.status == 'rejected' %}
+            <span class="badge bg-danger">Rejected</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% endif %}
+        </td>
+        <td>{{ request.requested_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No access requests submitted yet.</p>
+{% endif %}
+
+<!-- Mini Trend Visualization (read-only) -->
+<style>
+  .mini-chart { min-height: 180px; }
+  .card-link { color: inherit; text-decoration: none; }
+  .card-link .card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1); }
+</style>
+
+<div class="row g-3 mt-4">
+  <!-- Yearly Output -->
+  <div class="col-md-4">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title d-flex justify-content-between align-items-center">
+            Yearly Output
+            <span class="small text-muted">view details →</span>
+          </h6>
+          <div id="miniYearly" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Category Trend -->
+  <div class="col-md-4">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title d-flex justify-content-between align-items-center">
+            Category Trend
+            <span class="small text-muted">view details →</span>
+          </h6>
+          <div id="miniCategory" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Most Accessed Papers (by School Year) -->
+  <div class="col-md-4">
+    <a href="{% url 'trends_dashboard' %}" class="card-link">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="card-title d-flex justify-content-between align-items-center">
+            Most Accessed Papers
+            <small id="miniAyLabel" class="text-muted"></small>
+          </h6>
+          <div id="miniMostAccessed" class="mini-chart"></div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(function () {
+  // helpers
+  async function fetchJSON(url) {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+  const AY_START_MONTH = 8;
+  function ayFor(d) {
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    return (m >= AY_START_MONTH) ? `${y}-${y+1}` : `${y-1}-${y}`;
+  }
+
+  // elements
+  const elYearly   = document.querySelector('#miniYearly');
+  const elCategory = document.querySelector('#miniCategory');
+  const elMostAcc  = document.querySelector('#miniMostAccessed');
+  const elAyLabel  = document.querySelector('#miniAyLabel');
+
+  // Yearly + Category charts
+  fetchJSON("{% url 'trends_api' %}")
+    .then(data => {
+      new ApexCharts(elYearly, {
+        chart: { type: 'donut', height: 180, sparkline: { enabled: true } },
+        series: data.yearly.counts,
+        labels: data.yearly.labels,
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } }
+      }).render();
+
+      new ApexCharts(elCategory, {
+        chart: { type: 'line', height: 180, sparkline: { enabled: true } },
+        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
+        xaxis: { categories: data.stackedByCategory.labels },
+        stroke: { curve: 'smooth', width: 2 },
+        markers: { size: 0 },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } }
+      }).render();
+    })
+    .catch(err => console.error('trends_api error:', err));
+
+  // Most Accessed mini chart with AY fallback
+  const currentAY = ayFor(new Date());
+  const ayCandidates = Array.from({length: 5}, (_, i) => {
+    const base = parseInt(currentAY.slice(0,4)) - i;
+    return `${base}-${base+1}`;
+  });
+
+  async function renderMostAccessed(ay) {
+    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
+    const papers = d.topPapers || [];
+    if (!papers.length) return false;
+
+    const labels = papers.map(p => p.title.length > 22 ? p.title.slice(0,22) + '…' : p.title);
+    const views  = papers.map(p => p.views);
+    elMostAcc.innerHTML = '';
+
+    new ApexCharts(elMostAcc, {
+      chart: { type: 'bar', height: 180, sparkline: { enabled: true } },
+      series: [{ name: 'Views', data: views }],
+      xaxis: { categories: labels },
+      plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
+      dataLabels: { enabled: false },
+      tooltip: {
+        y: { formatter: v => v },
+        x: { formatter: (val, ctx) => papers[ctx.dataPointIndex]?.title || val }
+      }
+    }).render();
+
+    elAyLabel.textContent = ay;
+    return true;
+  }
+
+  (async () => {
+    let ok = false;
+    for (const ay of ayCandidates) {
+      try {
+        ok = await renderMostAccessed(ay);
+        if (ok) break;
+      } catch (e) {
+        console.error('most_accessed_api error for', ay, e);
+      }
+    }
+    if (!ok) {
+      elAyLabel.textContent = currentAY;
+      elMostAcc.innerHTML = '<div class="text-muted small">No views recorded yet.</div>';
+    }
+  })();
+})();
+</script>
+{% endblock %}

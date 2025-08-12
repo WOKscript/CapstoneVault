@@ -1,0 +1,176 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0">Research Trends</h3>
+    <span class="text-muted small">Visible to all logged-in users</span>
+  </div>
+
+  <style>
+    .chart-wrap { width: 100%; }
+    #chartYearly     { min-height: 320px; }  /* Pie */
+    #chartStacked    { min-height: 360px; }  /* Line by category */
+    #chartTopPapers  { min-height: 380px; }  /* Horizontal bar */
+  </style>
+
+  <!-- Papers per Year (PIE) -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <h6 class="card-title mb-3">Papers per Year</h6>
+      <div id="chartYearly" class="chart-wrap"></div>
+    </div>
+  </div>
+
+  <!-- Papers by Category (LINE by year) -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <h6 class="card-title mb-3">Papers by Category (Line by Year)</h6>
+      <div id="chartStacked" class="chart-wrap"></div>
+    </div>
+  </div>
+
+  <!-- Most Accessed (horizontal bar) + AY selector -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h6 class="mb-0">Most Accessed Papers (by School Year)</h6>
+        <div class="d-flex align-items-center gap-2">
+          <label class="form-label mb-0 small">School Year</label>
+          <select id="aySelect" class="form-select form-select-sm"></select>
+        </div>
+      </div>
+      <div id="chartTopPapers" class="chart-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ApexCharts CDN -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(function () {
+  // optional: set a custom palette (leave undefined to use default theme)
+  const palette = undefined;
+
+  // ---- fetch helper ----
+  async function fetchJSON(url) {
+    const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  // ---- AY selector (last 5 AYs; starts in August) ----
+  const AY_START = 8;
+  function ayFor(d) {
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    return (m >= AY_START) ? `${y}-${y+1}` : `${y-1}-${y}`;
+  }
+  const aySelect = document.getElementById('aySelect');
+  const nowAY = ayFor(new Date());
+  const ayList = [];
+  for (let i = 0; i < 5; i++) {
+    const base = parseInt(nowAY.slice(0,4)) - i;
+    ayList.push(`${base}-${base+1}`);
+  }
+  ayList.forEach(ay => {
+    const opt = document.createElement('option');
+    opt.value = ay; opt.textContent = ay;
+    if (ay === nowAY) opt.selected = true;
+    aySelect.appendChild(opt);
+  });
+
+  // ---- Chart handles ----
+  let chartYearlyPie = null;
+  let chartCategoryLine = null;
+  let chartTopPapers = null;
+
+  // ---- Base Trends (from trends_api) ----
+  fetchJSON("{% url 'trends_api' %}")
+    .then(data => {
+      // 1) Papers per Year → PIE
+      chartYearlyPie = new ApexCharts(document.querySelector("#chartYearly"), {
+        chart: { type: 'pie', height: 320, toolbar: { show: true } },
+        series: data.yearly.counts,
+        labels: data.yearly.labels,
+        legend: { position: 'bottom' },
+        dataLabels: { enabled: true, formatter: (val) => `${val.toFixed(1)}%` },
+        tooltip: { y: { formatter: (v) => v } },
+        colors: palette
+      });
+      chartYearlyPie.render();
+
+      // 2) Papers by Category → LINE
+      chartCategoryLine = new ApexCharts(document.querySelector("#chartStacked"), {
+        chart: { type: 'line', height: 360, toolbar: { show: true } },
+        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
+        xaxis: { categories: data.stackedByCategory.labels, labels: { rotate: -20 } },
+        stroke: { curve: 'smooth', width: 3 },
+        markers: { size: 4 },
+        dataLabels: { enabled: false },
+        yaxis: { labels: { formatter: v => Math.round(v) } },
+        legend: { position: 'top' },
+        tooltip: { y: { formatter: (v) => v } },
+        colors: palette
+      });
+      chartCategoryLine.render();
+    })
+    .catch(err => console.error('trends_api error:', err));
+
+  // ---- Most Accessed (from most_accessed_api) ----
+  const mountTop = document.getElementById('chartTopPapers');
+  let reqToken = 0; // prevent race conditions
+
+  function setLoading(msg) {
+    if (chartTopPapers) { chartTopPapers.destroy(); chartTopPapers = null; }
+    mountTop.innerHTML = `<div class="text-muted small ms-1 mt-2">${msg}</div>`;
+  }
+
+  async function loadAY(ay) {
+    const myToken = ++reqToken;
+    try {
+      setLoading(`Loading ${ay}…`);
+      const d = await fetchJSON(`{% url 'most_accessed_api' %}?ay=${encodeURIComponent(ay)}`);
+      if (myToken !== reqToken) return; // newer request already started
+
+      const papers = d?.topPapers ?? [];
+      mountTop.innerHTML = '';
+
+      if (!papers.length) {
+        mountTop.innerHTML = `<div class="text-muted small ms-1 mt-2">No views recorded for ${ay}.</div>`;
+        return;
+      }
+
+      const labels = papers.map(p => p.title.length > 40 ? p.title.slice(0, 40) + '…' : p.title);
+      const values = papers.map(p => p.views);
+
+      chartTopPapers = new ApexCharts(mountTop, {
+        chart: { type: 'bar', height: 380, toolbar: { show: true } },
+        series: [{ name: 'Views', data: values }],
+        xaxis: { categories: labels, labels: { trim: true } },
+        plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
+        dataLabels: { enabled: false },
+        tooltip: {
+          y: { formatter: v => v },
+          x: { formatter: (val, ctx) => papers[ctx.dataPointIndex]?.title || val }
+        },
+        colors: palette
+      });
+      await chartTopPapers.render();
+    } catch (e) {
+      if (myToken !== reqToken) return;
+      console.error('most_accessed_api error:', e);
+      mountTop.innerHTML = `<div class="text-danger small ms-1 mt-2">Failed to load ${ay}. Check console.</div>`;
+    }
+  }
+
+  aySelect.addEventListener('change', () => loadAY(aySelect.value));
+  loadAY(aySelect.value);
+
+  // Nudge charts after sidebar toggle (layout width change)
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
+  });
+})();
+</script>
+{% endblock %}

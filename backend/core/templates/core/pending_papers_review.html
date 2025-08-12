@@ -1,0 +1,32 @@
+{% extends 'core/base.html' %}
+{% block content %}
+  <h3 class="mb-4">Adviser – Pending Capstone Papers</h3>
+
+  {% if papers %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Title</th><th>Authors</th><th>Uploaded By</th><th>Uploaded At</th><th>Abstract</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for paper in papers %}
+        <tr>
+          <td>{{ paper.title }}</td>
+          <td>{{ paper.authors }}</td>
+          <td>{{ paper.uploaded_by.username }}</td>
+          <td>{{ paper.uploaded_at }}</td>
+          <td style="max-width:300px;">{{ paper.abstract|truncatewords:50 }}</td>
+          <td>
+            <a href="{{ paper.file.url }}" class="btn btn-sm btn-info" target="_blank">View PDF</a>
+            <a href="{% url 'adviser_approve_paper' paper.id %}" class="btn btn-sm btn-success">Approve</a>
+            <a href="{% url 'adviser_revise_paper'  paper.id %}" class="btn btn-sm btn-warning">Revise</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No pending papers to review.</p>
+  {% endif %}
+{% endblock %}

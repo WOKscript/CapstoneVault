@@ -1,0 +1,14 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h3>Reject Paper: {{ paper.title }}</h3>
+
+<form method="POST">
+  {% csrf_token %}
+  <div class="mb-3">
+    {{ form.feedback.label_tag }}
+    {{ form.feedback }}
+  </div>
+  <button type="submit" class="btn btn-danger">Reject with Feedback</button>
+  <a href="{% url 'admin_pending_papers' %}" class="btn btn-secondary">Cancel</a>
+{% endblock %}

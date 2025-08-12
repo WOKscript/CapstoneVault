@@ -1,0 +1,103 @@
+{% extends 'core/base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container py-3">
+  <!-- Title + context -->
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h3 class="mb-1">Request to View</h3>
+      <div class="text-muted small">Paper: <strong>{{ paper.title }}</strong></div>
+    </div>
+    <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">Back</a>
+  </div>
+
+  <!-- Card -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <!-- Tips / notice -->
+      {% if request.user.userprofile.role == 'non_verified' %}
+        <div class="alert alert-info py-2">
+          <strong>Heads up:</strong> As a non‑verified user, we need your address and phone number together with your reason.
+        </div>
+      {% else %}
+        <div class="alert alert-light border py-2">
+          Please provide a clear reason so the adviser/admin can approve your request faster.
+        </div>
+      {% endif %}
+
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Reason -->
+        <div class="mb-3">
+          <label class="form-label">Reason <span class="text-danger">*</span></label>
+          {% render_field form.reason class+="form-control" rows="5" placeholder="e.g., I’m writing a literature review on e‑voting security and need to compare approaches." %}
+          {% if form.reason.errors %}
+            <div class="text-danger small mt-1">{{ form.reason.errors.0 }}</div>
+          {% else %}
+            <div class="form-text d-flex justify-content-between">
+              <span>Be specific (course, research purpose, or requirement).</span>
+              <span id="reasonCounter" class="text-muted"></span>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if request.user.userprofile.role == 'non_verified' %}
+          <!-- Address -->
+          <div class="mb-3">
+            <label class="form-label">Address <span class="text-danger">*</span></label>
+            {% render_field form.address class+="form-control" placeholder="Street, Barangay, City/Province" %}
+            {% if form.address.errors %}
+              <div class="text-danger small mt-1">{{ form.address.errors.0 }}</div>
+            {% else %}
+              <div class="form-text">Your address will only be used to verify requests.</div>
+            {% endif %}
+          </div>
+
+          <!-- Phone -->
+          <div class="mb-3">
+            <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">+63</span>
+              {% render_field form.phone class+="form-control" placeholder="9XXXXXXXXX" %}
+            </div>
+            {% if form.phone.errors %}
+              <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+            {% else %}
+              <div class="form-text">Mobile format: 9XXXXXXXXX</div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="d-flex gap-2 justify-content-end pt-2">
+          <a href="javascript:history.back()" class="btn btn-light">Cancel</a>
+          <button type="submit" class="btn btn-primary">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Tiny enhancement: live counter for Reason (works if maxlength is set in your form widget; if not, it still shows length) -->
+<script>
+  (function () {
+    const ta = document.getElementById("id_reason");
+    const counter = document.getElementById("reasonCounter");
+    if (!ta || !counter) return;
+
+    function update() {
+      const len = ta.value.length;
+      const max = ta.getAttribute("maxlength");
+      counter.textContent = max ? `${len}/${max}` : `${len} chars`;
+    }
+    ta.addEventListener("input", update);
+    update();
+  })();
+</script>
+{% endblock %}

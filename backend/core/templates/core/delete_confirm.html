@@ -1,0 +1,16 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow border-0">
+    <div class="card-body text-center">
+      <h4 class="mb-3 text-danger">Delete “{{ paper.title }}”?</h4>
+      <p class="text-muted">This action <strong>cannot</strong> be undone.</p>
+      <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger me-2">Yes, delete</button>
+      </form>
+      <a href="{% url 'capstones_by_category' paper.category.slug %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+/* Layout variables */
+:root{
+  --navbar-h:56px;             /* Bootstrap default navbar height */
+  --sidebar-w:250px;           /* expanded width */
+  --sidebar-w-collapsed:72px;  /* collapsed rail width */
+}
+
+/* Prevent horizontal scroll issues */
+html, body { height: 100%; overflow-x: hidden; }
+
+/* Keep navbar above everything */
+.navbar.fixed-top { z-index: 1050; }
+
+/* ===== Sidebar (fixed under navbar) ===== */
+#sidebar-wrapper{
+  position: fixed;
+  top: var(--navbar-h);
+  left: 0;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--navbar-h));
+  background-color: #343a40;
+  color: #fff;
+  overflow-y: auto;   /* only the sidebar scrolls */
+  overflow-x: hidden;
+  z-index: 1030;
+  transition: width .3s ease, transform .2s ease;
+}
+
+/* Hide sidebar entirely when user is not authenticated */
+body:not(.is-auth) #sidebar-wrapper { display: none; }
+
+/* Sidebar items */
+#sidebar-wrapper .list-group-item{
+  border: none;
+  padding: 14px 18px;
+  background: transparent;
+  color: #fff;
+}
+#sidebar-wrapper .list-group-item:hover{
+  background-color: #495057;
+  color: #fff;
+}
+
+/* ===== Page content respects navbar + sidebar ===== */
+#page-content-wrapper{
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding-top: calc(var(--navbar-h) + 16px); /* clears fixed navbar */
+  transition: margin-left .3s ease;
+  min-width: 0; /* prevent flex overflow */
+}
+
+/* When not authenticated: no sidebar gutter */
+body:not(.is-auth) #page-content-wrapper{
+  margin-left: 0;
+  padding-top: calc(var(--navbar-h) + 16px);
+}
+
+/* ===== Desktop collapse (rail) ===== */
+#wrapper.toggled #sidebar-wrapper{ width: var(--sidebar-w-collapsed); }
+#wrapper.toggled #page-content-wrapper{ margin-left: var(--sidebar-w-collapsed); }
+
+/* ===== Mobile: sidebar overlays, content stays full width ===== */
+@media (max-width: 991.98px){
+  #sidebar-wrapper{
+    transform: translateX(-100%); /* hidden by default */
+    width: var(--sidebar-w);      /* full width when shown */
+  }
+  #wrapper.toggled #sidebar-wrapper{
+    transform: translateX(0);     /* slide in over content */
+  }
+  #page-content-wrapper,
+  #wrapper.toggled #page-content-wrapper{
+    margin-left: 0 !important;    /* never push content on mobile */
+    padding-top: calc(var(--navbar-h) + 12px);
+  }
+}
+
+/* Optional: card and utilities (kept from your styles) */
+.card { border-radius: 12px; transition: transform .2s; }
+.card-title { font-size: 1.1rem; margin-bottom: .5rem; }
+.card .btn { width: 30%; text-align: center; }
+.bg-orange { background-color: #fd7e14 !important; color: #fff !important; }
+
+/* Charts container helpers (if you use them) */
+.chart-box { position: relative; width: 100%; height: 320px; }
+.chart-box.tall  { height: 420px; }
+.chart-box.short { height: 260px; }
+.chart-box canvas { width: 100% !important; height: 100% !important; }

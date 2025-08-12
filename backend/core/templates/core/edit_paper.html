@@ -1,0 +1,49 @@
+{% extends 'core/base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+  <h3 class="mb-4">Edit Capstone Paper</h3>
+
+  <form method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+      {{ form.title|add_class:"form-control" }}
+    </div>
+
+    <div class="mb-3">
+      <label for="{{ form.abstract.id_for_label }}" class="form-label">Abstract</label>
+      {{ form.abstract|add_class:"form-control" }}
+    </div>
+
+    <div class="mb-3">
+      <label for="{{ form.authors.id_for_label }}" class="form-label">Authors</label>
+      {{ form.authors|add_class:"form-control" }}
+    </div>
+
+    <div class="mb-3">
+      <label for="{{ form.adviser.id_for_label }}" class="form-label">Assign Adviser</label>
+        {{ form.adviser|add_class:"form-control" }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">File:</label>
+      <div class="mb-1">
+        Currently: <a href="{{ paper.file.url }}" target="_blank">{{ paper.file.name }}</a>
+      </div>
+      <label for="{{ form.file.id_for_label }}" class="form-label">Change:</label>
+      {{ form.file|add_class:"form-control" }}
+    </div>
+
+    <div class="mb-3">
+      <label for="{{ form.publication_year.id_for_label }}" class="form-label">Publication Year</label>
+      {{ form.publication_year|add_class:"form-control" }}
+    </div>
+
+    <div class="d-flex justify-content-start gap-2 mt-4">
+      <button type="submit" class="btn btn-success">Save Changes</button>
+      <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
