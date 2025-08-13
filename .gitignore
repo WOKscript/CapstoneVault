@@ -1,0 +1,36 @@
+# Django / Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE / Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment variables
+.env
+*.env
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Django static & media (generated files)
+staticfiles/
+media/
+
+# Migrations (optional: keep if you want version control for them)
+**/migrations/*.py
+!**/migrations/__init__.py

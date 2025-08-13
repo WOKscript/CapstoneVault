@@ -27,8 +27,11 @@
     .tag-wrap { max-height:56px; overflow:auto; }
     .card-footer { background:transparent; border-top:0; }
 
-    .actions { gap:.5rem; white-space:nowrap; }
-    .actions .btn { min-width: 86px; }
+    .actions { gap:.5rem; white-space:nowrap; width:100%; }
+    .actions .btn-fill {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   </style>
 
   <!-- Header -->
@@ -77,49 +80,6 @@
     </div>
   {% endif %}
 
-  <!-- Filter Modal -->
-  <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="filterModalLabel">Filters</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form method="get">
-            <input type="hidden" name="q" value="{{ search_query }}">
-            <input type="hidden" name="sort" value="{{ request.GET.sort }}">
-            <div class="mb-3">
-              <label for="yearFilter" class="form-label">Year</label>
-              <select id="yearFilter" name="year" class="form-select form-select-sm">
-                <option value="">All Years</option>
-                {% for y in years %}
-                  <option value="{{ y }}" {% if y|stringformat:"s" == selected_year %}selected{% endif %}>{{ y }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="subcatFilter" class="form-label">Subcategory</label>
-              <select id="subcatFilter" name="subcategory" class="form-select form-select-sm">
-                <option value="">All Subcategories</option>
-                {% for sub in subcategories %}
-                  <option value="{{ sub }}" {% if sub == selected_subcategory %}selected{% endif %}>{{ sub }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-success btn-sm">Apply</button>
-            </div>
-            <div class="mt-2 text-center">
-              <a href="{% url 'capstones_by_category' category.slug %}">Reset All Filters</a>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
   {% if papers %}
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
       {% for paper in papers %}
@@ -146,27 +106,27 @@
               <div class="actions d-flex align-items-stretch flex-nowrap">
 
                 {% if request.user.userprofile.role == 'admin' %}
-                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">View PDF</a>
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
                   <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
                   <button type="button" class="btn btn-outline-danger btn-sm"
                           data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
 
                 {% elif request.user.userprofile.role == 'verified' and request.user == paper.uploaded_by %}
-                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">View PDF</a>
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
                   <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
                   <button type="button" class="btn btn-outline-danger btn-sm"
                           data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
 
                 {% elif request.user.userprofile.role == 'verified' %}
-                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">View PDF</a>
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
                   <button type="button" class="btn btn-outline-secondary btn-sm"
                           data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
 
                 {% else %}
                   {% if paper.id in approved_access_ids %}
-                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">View PDF</a>
+                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
                   {% else %}
-                    <a href="{% url 'request_access' paper.id %}" class="btn btn-warning btn-sm">Request Access</a>
+                    <a href="{% url 'request_access' paper.id %}" class="btn btn-warning btn-sm btn-fill">Request Access</a>
                   {% endif %}
                   <button type="button" class="btn btn-outline-secondary btn-sm"
                           data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
@@ -176,105 +136,12 @@
             </div>
           </div>
         </div>
-
-        <!-- Info Modal -->
-        <div class="modal fade" id="infoModal{{ paper.id }}" tabindex="-1"
-             aria-labelledby="infoModalLabel{{ paper.id }}" aria-hidden="true">
-          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="infoModalLabel{{ paper.id }}">{{ paper.title }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <p class="mb-1"><strong>Abstract</strong></p>
-                <p style="text-align: justify; text-justify: inter-word;">{{ paper.abstract }}</p>
-                <hr class="my-3">
-                <div class="row g-2 small">
-                  <div class="col-12 col-md-6"><strong>Authors:</strong> {{ paper.authors }}</div>
-                  <div class="col-12 col-md-6">{% if paper.adviser %}<strong>Adviser:</strong> {{ paper.adviser }}{% endif %}</div>
-                  <div class="col-12 col-md-6"><strong>Year:</strong> {{ paper.publication_year }}</div>
-                  <div class="col-12 col-md-6"><strong>Category:</strong> {{ paper.category.name }}</div>
-                  <div class="col-12">
-                    <strong>Tags:</strong>
-                    {% for tag in paper.tags.all %}
-                      <span class="badge tag">{{ tag.name }}</span>
-                    {% empty %}
-                      <span class="muted">None</span>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {% if request.user.userprofile.role == 'admin' %}
-        <!-- Delete Confirmation Modal (Admin) -->
-        <div class="modal fade" id="delModal{{ paper.id }}" tabindex="-1" aria-labelledby="delModalLabel{{ paper.id }}" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="delModalLabel{{ paper.id }}">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                Are you sure you want to permanently delete "<strong>{{ paper.title }}</strong>"?
-                <div class="small text-muted mt-2">This action cannot be undone.</div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'delete_paper' paper.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-danger btn-sm">Yes, delete</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if request.user.userprofile.role == 'verified' and request.user == paper.uploaded_by %}
-        <!-- Delete Confirmation Modal (Verified Owner) -->
-        <div class="modal fade" id="delModal{{ paper.id }}" tabindex="-1" aria-labelledby="delModalLabel{{ paper.id }}" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-              <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="delModalLabel{{ paper.id }}">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                Are you sure you want to permanently delete "<strong>{{ paper.title }}</strong>"?
-                <div class="small text-muted mt-2">This action cannot be undone.</div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'delete_paper' paper.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="btn btn-danger btn-sm">Yes, delete</button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
       {% endfor %}
     </div>
   {% else %}
     <div class="text-center py-5">
-      <div class="mb-2">
-        <svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" opacity=".12" d="M5 4h14a1 1 0 0 1 1 1v12H4V5a1 1 0 0 1 1-1z"/>
-          <path fill="currentColor" d="M3 20h18v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>
-        </svg>
-      </div>
       <h6 class="mb-1">No papers found</h6>
       <p class="muted mb-3">Try adjusting your search or filters.</p>
-      <a href="{% url 'capstones_by_category' category.slug %}" class="btn btn-outline-primary btn-sm">Reset Filters</a>
     </div>
   {% endif %}
 
