@@ -32,6 +32,9 @@
       flex: 1 1 auto;
       min-width: 0;
     }
+    .modal-body p {
+      text-align: justify;
+    }
   </style>
 
   <!-- Header -->
@@ -111,6 +114,11 @@
                   <button type="button" class="btn btn-outline-danger btn-sm"
                           data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
 
+                {% elif request.user.userprofile.role == 'adviser' %}
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
+                  <button type="button" class="btn btn-outline-secondary btn-sm"
+                          data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+
                 {% elif request.user.userprofile.role == 'verified' and request.user == paper.uploaded_by %}
                   <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
                   <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
@@ -136,6 +144,29 @@
             </div>
           </div>
         </div>
+
+        <!-- Info Modal -->
+        <div class="modal fade" id="infoModal{{ paper.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ paper.title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p><strong>Authors:</strong> {{ paper.authors }}</p>
+                {% if paper.adviser %}<p><strong>Adviser:</strong> {{ paper.adviser }}</p>{% endif %}
+                <p><strong>Year:</strong> {{ paper.publication_year }}</p>
+                <p><strong>Category:</strong> {{ paper.category.name }} / {{ paper.subcategory.name }}</p>
+                {% if paper.abstract %}<p><strong>Abstract:</strong> {{ paper.abstract }}</p>{% endif %}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       {% endfor %}
     </div>
   {% else %}
