@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-  {# Resolve dashboard URL based on role #}
   {% if request.user.userprofile.role == 'admin' %}
     {% url 'admin_dashboard' as dashboard_url %}
   {% elif request.user.userprofile.role == 'adviser' %}
@@ -14,22 +13,16 @@
   {% endif %}
 
   <style>
-    /* tiny, tasteful polish */
     .page-header h3 { letter-spacing: .2px; }
     .cat-card { transition: transform .08s ease, box-shadow .2s ease; }
     .cat-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.08) !important; }
     .badge-count { font-weight: 600; }
-    .stretched-link::after { position: static; } /* fix for overflow-hidden parents */
+    .stretched-link::after { position: static; }
   </style>
 
   <!-- Header + Breadcrumb -->
-  <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+  <div class="page-header mb-2">
     <h3 class="mb-0">Capstone Categories</h3>
-    {% if categories %}
-      <span class="text-muted small">
-        {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
-      </span>
-    {% endif %}
   </div>
 
   <nav aria-label="breadcrumb" class="mb-4">
@@ -39,8 +32,31 @@
     </ol>
   </nav>
 
+  <!-- Toolbar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <!-- Left: Category count -->
+    {% if categories %}
+      <span class="text-muted small">{{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}</span>
+    {% else %}
+      <span class="text-muted small">0 categories</span>
+    {% endif %}
+
+    <!-- Right: Search/Sort/Filter -->
+    <form method="get" class="d-flex align-items-center gap-2">
+      <input type="text" name="q" class="form-control" placeholder="Search categories by name"
+             value="{{ request.GET.q|default:'' }}" style="max-width: 240px;">
+      <select name="sort" class="form-select" style="max-width: 160px;">
+        <option value="">Sort</option>
+        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+        <option value="count" {% if request.GET.sort == 'count' %}selected{% endif %}>Paper Count</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Search</button>
+      <a href="#" class="btn btn-outline-secondary">Filter</a>
+    </form>
+  </div>
+
   {% if categories %}
-    <!-- Responsive, even grid -->
+    <!-- Responsive grid -->
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
       {% for cat in categories %}
         <div class="col">
@@ -52,17 +68,14 @@
                   {{ cat.paper_count }} paper{{ cat.paper_count|pluralize }}
                 </span>
               </div>
-
               <p class="text-muted small mb-4">
                 Explore approved capstones under {{ cat.name }}.
               </p>
-
               <div class="mt-auto">
                 <a href="{% url 'capstones_by_category' cat.slug %}"
                    class="btn btn-primary w-100 position-relative">
                   View {{ cat.name }}
                 </a>
-                <!-- Make the whole card clickable without changing visual layout -->
                 <a href="{% url 'capstones_by_category' cat.slug %}" class="stretched-link" aria-label="Open {{ cat.name }}"></a>
               </div>
             </div>
@@ -75,12 +88,12 @@
     <div class="text-center py-5">
       <div class="mb-2">
         <svg width="64" height="64" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" opacity=".15" d="M5 4h14a1 1 0 0 1 1 1v12H4V5a1 1 0 0 1 1-1z"/>
+          <path fill="currentColor" opacity=".15" d="M5 4h14a1 1 0 0 1 1 1v12H4V5a1 1 0 0 1-1-1z"/>
           <path fill="currentColor" d="M3 20h18v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>
         </svg>
       </div>
-      <h5 class="mb-1">No categories yet</h5>
-      <p class="text-muted mb-3">Once admins create categories, they’ll appear here.</p>
+      <h5 class="mb-1">No categories found</h5>
+      <p class="text-muted mb-3">Try adjusting your search or go back to the dashboard.</p>
       <a href="{{ dashboard_url }}" class="btn btn-outline-primary">Back to Dashboard</a>
     </div>
   {% endif %}
