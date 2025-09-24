@@ -4,39 +4,78 @@
 {% block content %}
 <div class="card shadow-sm p-4">
   <h3 class="mb-4">Upload Capstone Paper</h3>
+  
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      <h6>Please correct the following errors:</h6>
+      {% for field, errors in form.errors.items %}
+        {% for error in errors %}
+          <p class="mb-1"><strong>{{ field|title }}:</strong> {{ error }}</p>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  {% endif %}
+  
   <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div class="mb-3">
       <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
       {{ form.title|add_class:"form-control" }}
+      {% if form.title.errors %}
+        <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+      {% endif %}
     </div>
 
     <div class="mb-3">
       <label for="{{ form.abstract.id_for_label }}" class="form-label">Abstract</label>
       {{ form.abstract|add_class:"form-control" }}
+      {% if form.abstract.errors %}
+        <div class="text-danger small mt-1">{{ form.abstract.errors.0 }}</div>
+      {% endif %}
     </div>
 
     <div class="mb-3">
       <label for="{{ form.authors.id_for_label }}" class="form-label">Authors</label>
       {{ form.authors|add_class:"form-control" }}
+      {% if form.authors.errors %}
+        <div class="text-danger small mt-1">{{ form.authors.errors.0 }}</div>
+      {% endif %}
     </div>
 
     <div class="mb-3">
-      <label for="{{ form.adviser.id_for_label }}" class="form-label">Assign Adviser</label>
-      {{ form.adviser|add_class:"form-control" }}
+      <label for="{{ form.instructor.id_for_label }}" class="form-label">Instructor</label>
+      {{ form.instructor|add_class:"form-control" }}
+      {% if form.instructor.errors %}
+        <div class="text-danger small mt-1">{{ form.instructor.errors.0 }}</div>
+      {% endif %}
     </div>
     
     <div class="mb-3">
-      {{ form.publication_year.label_tag }} {{ form.publication_year }}
+      <label for="{{ form.publication_year.id_for_label }}" class="form-label">Publication Year</label>
+      {{ form.publication_year|add_class:"form-control" }}
+      {% if form.publication_year.errors %}
+        <div class="text-danger small mt-1">{{ form.publication_year.errors.0 }}</div>
+      {% endif %}
     </div>
 
     <div class="mb-3">
-      <label for="{{ form.file.id_for_label }}" class="form-label">File</label>
+      <label for="{{ form.file.id_for_label }}" class="form-label">PDF File</label>
       {{ form.file|add_class:"form-control" }}
+      {% if form.file.errors %}
+        <div class="text-danger small mt-1">{{ form.file.errors.0 }}</div>
+      {% endif %}
+      <div class="form-text">Please upload a PDF file (max 20MB).</div>
     </div>
 
-    <button type="submit" class="btn btn-primary">Upload</button>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-upload me-1"></i>Upload Paper
+      </button>
+      <a href="{% url 'verified_dashboard' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Cancel
+      </a>
+    </div>
   </form>
 </div>
 {% endblock %}

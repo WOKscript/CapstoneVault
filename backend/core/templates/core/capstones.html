@@ -4,6 +4,8 @@
 {% block content %}
   {% if request.user.userprofile.role == 'admin' %}
     {% url 'admin_dashboard' as dashboard_url %}
+  {% elif request.user.userprofile.role == 'instructor' %}
+    {% url 'instructor_dashboard' as dashboard_url %}
   {% elif request.user.userprofile.role == 'adviser' %}
     {% url 'adviser_dashboard' as dashboard_url %}
   {% elif request.user.userprofile.role == 'verified' %}
@@ -41,17 +43,19 @@
       <span class="text-muted small">0 categories</span>
     {% endif %}
 
-    <!-- Right: Search/Sort/Filter -->
+    <!-- Right: Search/Sort -->
     <form method="get" class="d-flex align-items-center gap-2">
       <input type="text" name="q" class="form-control" placeholder="Search categories by name"
              value="{{ request.GET.q|default:'' }}" style="max-width: 240px;">
       <select name="sort" class="form-select" style="max-width: 160px;">
         <option value="">Sort</option>
-        <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name (A-Z)</option>
+        <option value="name"  {% if request.GET.sort == 'name' %}selected{% endif %}>Name (A–Z)</option>
         <option value="count" {% if request.GET.sort == 'count' %}selected{% endif %}>Paper Count</option>
       </select>
-      <button type="submit" class="btn btn-primary">Search</button>
-      <a href="#" class="btn btn-outline-secondary">Filter</a>
+      <button type="submit" class="btn btn-primary">Apply</button>
+      {% if request.GET.q or request.GET.sort %}
+        <a href="{% url 'capstones_main' %}" class="btn btn-outline-secondary">Reset</a>
+      {% endif %}
     </form>
   </div>
 

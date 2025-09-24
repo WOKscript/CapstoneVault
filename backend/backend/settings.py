@@ -149,15 +149,13 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Fallback
 ]
 
-# Only send cookie over HTTPS
-SESSION_COOKIE_SECURE = True
-
-# Prevent JavaScript access
+# Secure cookie flags — relax when DEBUG for localhost (HTTP)
 SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
 
-# Optional: prevent sending session cookie on every POST
-CSRF_COOKIE_SECURE    = True
-CSRF_COOKIE_HTTPONLY  = True
-
-# Expire the session when the user closes their browser
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+if DEBUG:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

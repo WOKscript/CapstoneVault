@@ -6,13 +6,13 @@ from django.utils.text import slugify
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
-        ('instructor', 'Instructor'),   # renamed from 'adviser'
+        ('adviser', 'Adviser'),
         ('verified', 'Verified User'),
         ('non_verified', 'Non-Verified User'),
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='non_verified')
-    can_upload = models.BooleanField(default=False)  # Granted by Instructor
+    can_upload = models.BooleanField(default=False)  # Granted by Adviser
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
@@ -50,6 +50,11 @@ class Tag(models.Model):
 
 # CAPSTONE PAPER (extended)
 class CapstonePaper(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('revise', 'Revise'),
+    ]
 
     title = models.CharField(max_length=255)
     abstract = models.TextField(blank=True)
@@ -58,9 +63,9 @@ class CapstonePaper(models.Model):
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     publication_year = models.IntegerField(null=True, blank=True)
-
-    # NOTE: keeping this field name as-is for now (search/filter depends on it)
-    instructor = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    adviser = models.CharField(max_length=255, blank=True, null=True)
+    feedback = models.TextField(blank=True, null=True)
 
     # RELATIONSHIPS
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)

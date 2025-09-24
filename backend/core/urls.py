@@ -6,12 +6,11 @@ from django.shortcuts import redirect
 
 from .views import (
     login_view, logout_view, signup_view,
-    admin_dashboard, adviser_dashboard,
+    admin_dashboard, instructor_dashboard,
     verified_dashboard, non_verified_dashboard,
     upload_paper_view, capstones_main_view,
     capstone_list_by_category, edit_paper_view,
-    delete_paper_view, adviser_pending_papers,
-    adviser_approve_paper, adviser_revise_paper,
+    delete_paper_view,
     manage_upload_access, toggle_upload_access,
     request_access_view, access_request_list,
     approve_access_request, reject_access_request,
@@ -30,7 +29,7 @@ urlpatterns = [
 
     # Dashboards
     path('dashboard/admin/',         admin_dashboard,        name='admin_dashboard'),
-    path('dashboard/adviser/',       adviser_dashboard,      name='adviser_dashboard'),
+    path('dashboard/instructor/',    instructor_dashboard,   name='instructor_dashboard'),
     path('dashboard/verified/',      verified_dashboard,     name='verified_dashboard'),
     path('dashboard/non-verified/',  non_verified_dashboard, name='non_verified_dashboard'),
 
@@ -47,14 +46,9 @@ urlpatterns = [
     # Watermarked viewing
     path('papers/<int:paper_id>/view/',     view_paper,                  name='view_paper'),
 
-    # Adviser review
-    path('adviser/pending/',                      adviser_pending_papers, name='adviser_pending_papers'),
-    path('adviser/paper/<int:paper_id>/approve/', adviser_approve_paper, name='adviser_approve_paper'),
-    path('adviser/paper/<int:paper_id>/revise/',  adviser_revise_paper,  name='adviser_revise_paper'),
-
-    # Upload-access management
-    path('adviser/manage-upload-access/',         manage_upload_access,   name='manage_upload_access'),
-    path('adviser/toggle-upload/<int:user_id>/',  toggle_upload_access,   name='toggle_upload_access'),
+    # Upload-access management (Instructor)
+    path('instructor/manage-upload-access/',         manage_upload_access,   name='manage_upload_access'),
+    path('instructor/toggle-upload/<int:user_id>/',  toggle_upload_access,   name='toggle_upload_access'),
 
     # Access requests
     path('request-access/<int:paper_id>/',                request_access_view,     name='request_access'),

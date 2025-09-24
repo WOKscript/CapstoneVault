@@ -1,5 +1,5 @@
 # ============================
-# core/views.py  (FULL FILE)
+# core/views.py
 # ============================
 import os
 import io
@@ -7,7 +7,7 @@ import joblib
 from datetime import datetime
 
 from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, resolve_url
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -36,7 +36,6 @@ from .forms import (
     LoginForm,
     CapstonePaperForm,
     PaperAccessRequestForm,
-    RejectionFeedbackForm,
 )
 from .decorators import role_required
 
@@ -75,17 +74,24 @@ def _unique_username_from_email(email: str) -> str:
         candidate = f"{base}{i}"
     return candidate
 
+def get_role_default_dashboard(user):
+    mapping = {
+        "admin": "admin_dashboard",
+        "instructor": "instructor_dashboard",
+        "verified": "verified_dashboard",
+        "non_verified": "non_verified_dashboard",
+    }
+    role = getattr(getattr(user, "userprofile", None), "role", None)
+    return resolve_url(mapping.get(role, "verified_dashboard"))
+
 # ── Authentication & Signup ───────────────────────────────────────────────────
 
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 def logout_view(request):
-    # Standard logout fully clears auth + session id
     logout(request)
     request.session.flush()
-    # Redirect to login (or change to 'dashboard' if you prefer)
     resp = redirect('login')
-    # Extra guard so the redirect response itself isn't cached
     resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp['Pragma'] = 'no-cache'
     resp['Expires'] = '0'
@@ -98,26 +104,19 @@ def signup_view(request):
         if form.is_valid():
             email = form.cleaned_data.get('email', '').strip()
 
-            # Prevent duplicate emails (default Django User doesn't enforce this)
             if User.objects.filter(email__iexact=email).exists():
                 form.add_error('email', 'An account with this email already exists.')
                 return render(request, 'core/signup.html', {'form': form})
 
             user = form.save(commit=False)
 
-            # Ensure a unique username even if the form doesn't provide one
             if not getattr(user, 'username', None):
                 user.username = _unique_username_from_email(email)
 
-            # If your form uses a single 'password' field (as in your current setup)
             user.set_password(form.cleaned_data['password'])
-            # If you later switch to UserCreationForm style, use:
-            # user.set_password(form.cleaned_data['password1'])
-
             user.email = email
             user.save()
 
-            # Assign role by domain
             role = 'verified' if email.lower().endswith('@evsu.edu.ph') else 'non_verified'
             UserProfile.objects.create(user=user, role=role)
 
@@ -131,49 +130,49 @@ def signup_view(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True, max_age=0)
 @csrf_protect
 def login_view(request):
-    if request.method == 'GET' and 'next' in request.GET:
-        return redirect('login')
-
+    # If already authenticated, go straight to your dashboard
     if request.user.is_authenticated:
-        try:
-            role = request.user.userprofile.role
-        except UserProfile.DoesNotExist:
-            role = 'admin' if request.user.is_superuser else 'non_verified'
-            UserProfile.objects.create(user=request.user, role=role)
-        return redirect_dashboard_based_on_role(request, role)
+        return redirect(get_role_default_dashboard(request.user))
 
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        user = authenticate(
-            request,
-            email=form.cleaned_data['email'],
-            password=form.cleaned_data['password']
-        )
+        # If you authenticate by email, resolve to username first
+        user = None
+        try:
+            u = User.objects.get(email__iexact=form.cleaned_data['email'])
+            user = authenticate(request, username=u.username, password=form.cleaned_data['password'])
+        except User.DoesNotExist:
+            user = None
+
         if user:
             request.session.cycle_key()
             login(request, user)
-            try:
-                role = user.userprofile.role
-            except UserProfile.DoesNotExist:
-                role = 'admin' if user.is_superuser else 'non_verified'
-                UserProfile.objects.create(user=user, role=role)
-            return redirect_dashboard_based_on_role(request, role)
+
+            # Honor ?next= if it's safe
+            next_url = request.POST.get("next") or request.GET.get("next")
+            if next_url:
+                from django.utils.http import url_has_allowed_host_and_scheme
+                if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                    return redirect(next_url)
+
+            return redirect(get_role_default_dashboard(user))
+
         form.add_error(None, "Invalid email or password.")
 
     return render(request, 'core/login.html', {'form': form})
 
-
 def redirect_dashboard_based_on_role(request, role):
     if role == 'admin':
         return redirect('admin_dashboard')
-    elif role == 'adviser':
-        return redirect('adviser_dashboard')
+    elif role == 'instructor':
+        return redirect('instructor_dashboard')
     elif role == 'verified':
         return redirect('verified_dashboard')
     elif role == 'non_verified':
         return redirect('non_verified_dashboard')
     else:
         messages.error(request, f"Unknown role: {role}. Contact admin.")
+        logout(request)
         return redirect('login')
 
 # ── Dashboards ─────────────────────────────────────────────────────────────────
@@ -200,20 +199,21 @@ def admin_dashboard(request):
 @never_cache
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['adviser'])
-def adviser_dashboard(request):
-    pending_count  = CapstonePaper.objects.filter(status='pending').count()
-    approved_count = CapstonePaper.objects.filter(status='approved').count()
-    revise_count   = CapstonePaper.objects.filter(status='revise').count()
-    recent_papers  = CapstonePaper.objects.order_by('-uploaded_at')[:5]
+@role_required(['instructor'])
+def instructor_dashboard(request):
+    """
+    No more 'status' field – show totals and recent items.
+    """
+    total_papers  = CapstonePaper.objects.count()
+    recent_papers = CapstonePaper.objects.order_by('-uploaded_at')[:5]
 
+    # Keep template keys so existing template won't crash.
     context = {
-        'pending_count': pending_count,
-        'approved_count': approved_count,
-        'revise_count': revise_count,
+        'approved_count': total_papers,  # formerly 'approved'
+        'revise_count': 0,               # no 'revise' anymore
         'recent_papers': recent_papers,
     }
-    return render(request, 'core/dashboard_adviser.html', context)
+    return render(request, 'core/dashboard_instructor.html', context)
 
 @never_cache
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
@@ -221,22 +221,11 @@ def adviser_dashboard(request):
 @role_required(['verified'])
 def verified_dashboard(request):
     user = request.user
-    pending_or_revise = CapstonePaper.objects.filter(
-        uploaded_by=user,
-        status__in=['pending', 'revise']
-    ).count()
 
-    can_upload      = user.userprofile.can_upload and (pending_or_revise == 0)
-    recent_requests = PaperAccessRequest.objects.filter(user=user).order_by('-requested_at')[:5]
-    revised_papers  = CapstonePaper.objects.filter(
-        uploaded_by=user,
-        status='revise'
-    ).order_by('-uploaded_at')
+    can_upload      = bool(getattr(user.userprofile, 'can_upload', False))
 
     context = {
         'can_upload': can_upload,
-        'recent_requests': recent_requests,
-        'revised_papers': revised_papers,
     }
     return render(request, 'core/dashboard_verified.html', context)
 
@@ -271,7 +260,7 @@ def upload_paper_view(request):
     profile = request.user.userprofile
 
     if profile.role == 'verified' and not profile.can_upload:
-        messages.warning(request, "Your adviser has not granted you upload permission.")
+        messages.warning(request, "Your instructor has not granted you upload permission.")
         return redirect('verified_dashboard')
 
     if request.method == 'POST':
@@ -289,7 +278,6 @@ def upload_paper_view(request):
             paper.category = cat_obj
             paper.subcategory = sub_obj
 
-            paper.status = 'approved' if profile.role == 'admin' else 'pending'
             paper.save()
 
             for name in tag_list:
@@ -314,11 +302,31 @@ def upload_paper_view(request):
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def capstones_main_view(request):
-    categories = Category.objects.annotate(paper_count=Count('capstonepaper'))
+    """
+    Categories page with:
+      - search by category name (?q=)
+      - sort by name or paper count (?sort=name|count)
+      - paper_count counts ALL papers (no status anymore)
+    """
+    q = (request.GET.get("q") or "").strip()
+    sort = (request.GET.get("sort") or "").strip()
+
+    categories = Category.objects.annotate(paper_count=Count("capstonepaper"))
+
+    if q:
+        categories = categories.filter(name__icontains=q)
+
+    categories = (
+        categories.order_by("-paper_count", "name")
+        if sort == "count"
+        else categories.order_by("name")
+    )
+
     can_upload = (
         request.user.userprofile.role == 'verified'
         and getattr(request.user.userprofile, 'can_upload', False)
     )
+
     return render(request, 'core/capstones.html', {
         'categories': categories,
         'can_upload': can_upload,
@@ -330,11 +338,12 @@ def capstones_main_view(request):
 def capstone_list_by_category(request, category):
     cat = get_object_or_404(Category, slug=category)
 
-    q      = request.GET.get('q', '').strip()
-    year   = request.GET.get('year', '')
-    subcat = request.GET.get('subcategory', '')
+    q      = (request.GET.get('q') or '').strip()
+    year   = (request.GET.get('year') or '').strip()
+    subcat = (request.GET.get('subcategory') or '').strip()
+    sort   = (request.GET.get('sort') or '').strip()
 
-    qs = CapstonePaper.objects.filter(category=cat, status='approved')
+    qs = CapstonePaper.objects.filter(category=cat)
 
     if year.isdigit():
         qs = qs.filter(publication_year=int(year))
@@ -346,7 +355,7 @@ def capstone_list_by_category(request, category):
             Q(title__icontains=q) |
             Q(abstract__icontains=q) |
             Q(authors__icontains=q) |
-            Q(adviser__icontains=q) |
+            Q(instructor__icontains=q) |
             Q(category__name__icontains=q) |
             Q(subcategory__name__icontains=q) |
             Q(tags__name__icontains=q)
@@ -355,11 +364,17 @@ def capstone_list_by_category(request, category):
             ft |= Q(publication_year=int(q))
         qs = qs.filter(ft).distinct()
 
-    papers = qs.order_by('-publication_year')
+    # sorting
+    if sort == 'year_asc':
+        qs = qs.order_by('publication_year', 'title')
+    elif sort == 'title_asc':
+        qs = qs.order_by('title')
+    else:
+        qs = qs.order_by('-publication_year', 'title')
 
     years = (
         CapstonePaper.objects
-        .filter(category=cat, status='approved')
+        .filter(category=cat)
         .values_list('publication_year', flat=True)
         .distinct()
         .order_by('-publication_year')
@@ -383,7 +398,7 @@ def capstone_list_by_category(request, category):
 
     return render(request, 'core/capstone_list.html', {
         'category':             cat,
-        'papers':               papers,
+        'papers':               qs,
         'search_query':         q,
         'selected_year':        year,
         'years':                years,
@@ -397,14 +412,24 @@ def capstone_list_by_category(request, category):
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def edit_paper_view(request, paper_id):
-    paper      = get_object_or_404(CapstonePaper, id=paper_id, uploaded_by=request.user)
-    old_status = paper.status
+    # Instructors & Admins can edit any paper.
+    # Verified users can edit only their own paper.
+    paper = get_object_or_404(CapstonePaper, id=paper_id)
+
+    role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
+    is_admin_or_instr = role in ['admin', 'instructor']
+    is_verified_owner = (role == 'verified' and paper.uploaded_by == request.user)
+
+    if not (is_admin_or_instr or is_verified_owner):
+        messages.error(request, "You don't have permission to edit this paper.")
+        return redirect('capstones_by_category', category=paper.category.slug)
 
     if request.method == 'POST':
         form = CapstonePaperForm(request.POST, request.FILES, instance=paper)
         if form.is_valid():
             paper = form.save(commit=False)
 
+            # Re-classify on edit (kept from your original logic)
             cat_name, sub_name, tag_list = classify_paper_ml(
                 form.cleaned_data['title'],
                 form.cleaned_data['abstract']
@@ -418,12 +443,9 @@ def edit_paper_view(request, paper_id):
                 tag_obj, _ = Tag.objects.get_or_create(name=name)
                 paper.tags.add(tag_obj)
 
-            if old_status == 'revise':
-                paper.status   = 'pending'
-                paper.feedback = ''
-                paper.save()
-
-            messages.success(request, 'Capstone paper updated and sent back for review.')
+            messages.success(request, 'Capstone paper updated successfully.')
+            if is_admin_or_instr:
+                return redirect('capstones_by_category', category=paper.category.slug)
             return redirect('verified_dashboard')
     else:
         form = CapstonePaperForm(instance=paper)
@@ -435,25 +457,24 @@ def edit_paper_view(request, paper_id):
 @login_required
 def delete_paper_view(request, paper_id):
     """
-    Admin can delete any paper.
-    Verified can delete only their own paper.
-    Others cannot delete.
-    No standalone confirmation page — use modal only.
+    Admin & Instructor: can delete any paper.
+    Verified: can delete only their own paper.
+    Others: cannot delete.
     """
     paper = get_object_or_404(CapstonePaper, id=paper_id)
     role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
 
-    is_admin = role == 'admin' or request.user.is_superuser
-    is_verified_owner = role == 'verified' and paper.uploaded_by == request.user
+    is_admin_or_instr = (role in ['admin', 'instructor'])
+    is_verified_owner = (role == 'verified' and paper.uploaded_by == request.user)
 
-    if not (is_admin or is_verified_owner):
+    if not (is_admin_or_instr or is_verified_owner):
         messages.error(request, "You don't have permission to delete this paper.")
         return redirect('capstones_by_category', category=paper.category.slug)
 
     if request.method == 'POST':
-        category = paper.category
+        category    = paper.category
         subcategory = paper.subcategory
-        cat_slug = category.slug if category else None
+        cat_slug    = category.slug if category else None
 
         has_other_in_cat = bool(
             category and CapstonePaper.objects.filter(category=category).exclude(id=paper.id).exists()
@@ -465,6 +486,7 @@ def delete_paper_view(request, paper_id):
         title = paper.title
         paper.delete()
 
+        # Optional cleanup if nothing else references these
         if category and not has_other_in_cat:
             category.delete()
         if subcategory and not has_other_in_sub:
@@ -476,20 +498,15 @@ def delete_paper_view(request, paper_id):
             return redirect('capstones_by_category', category=cat_slug)
         return redirect('capstones_main')
 
-    # If a GET request sneaks through, just redirect
     messages.info(request, "Deletion must be confirmed via the modal.")
     return redirect('capstones_by_category', category=paper.category.slug)
 
 
-# NEW ── Cancel a pending/revise upload (for Verified users)
+# NEW ── Cancel upload (kept name for compatibility; no status checks anymore)
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def cancel_revision(request, paper_id):
-    """
-    Allow the uploader to cancel/withdraw their own paper if it's still
-    in 'pending' or 'revise'. We delete the record, which frees them to upload again.
-    """
     if request.method != 'POST':
         messages.error(request, "Invalid request method.")
         return redirect('verified_dashboard')
@@ -500,68 +517,17 @@ def cancel_revision(request, paper_id):
         messages.error(request, "You can only cancel your own paper.")
         return redirect('verified_dashboard')
 
-    if paper.status not in ['pending', 'revise']:
-        messages.warning(request, "This paper can no longer be cancelled.")
-        return redirect('verified_dashboard')
-
     title = paper.title
     paper.delete()
-    messages.success(request, f"'{title}' has been cancelled and removed.")
+    messages.success(request, f"'{title}' has been removed.")
     return redirect('verified_dashboard')
-
-# ── Adviser Review: Pending / Approve / Revise ─────────────────────────────────
-
-@never_cache
-@cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
-@login_required
-@role_required(['adviser'])
-def adviser_pending_papers(request):
-    papers = CapstonePaper.objects.filter(status__in=['pending', 'revise'])
-    return render(request, 'core/pending_papers_review.html', {
-        'papers': papers,
-        'reviewer_role': 'adviser'
-    })
-
-@never_cache
-@cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
-@login_required
-@role_required(['adviser'])
-def adviser_approve_paper(request, paper_id):
-    paper = get_object_or_404(CapstonePaper, id=paper_id)
-    paper.status = 'approved'
-    paper.save()
-    messages.success(request, f"Paper '{paper.title}' approved.")
-    return redirect('capstones_by_category', category=paper.category.slug)
-
-@never_cache
-@cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
-@login_required
-@role_required(['adviser'])
-def adviser_revise_paper(request, paper_id):
-    paper = get_object_or_404(CapstonePaper, id=paper_id)
-    if request.method == 'POST':
-        form = RejectionFeedbackForm(request.POST)
-        if form.is_valid():
-            paper.status   = 'revise'
-            paper.feedback = form.cleaned_data['feedback']
-            paper.save()
-            messages.success(request, f"Paper '{paper.title}' marked for revision.")
-            return redirect('adviser_pending_papers')
-    else:
-        form = RejectionFeedbackForm()
-
-    return render(request, 'core/revise_paper.html', {
-        'form': form,
-        'paper': paper,
-        'reviewer_role': 'adviser'
-    })
 
 # ── Upload Access Management ────────────────────────────────────────────────────
 
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['adviser'])
+@role_required(['instructor'])
 def manage_upload_access(request):
     users = UserProfile.objects.filter(role='verified')
     return render(request, 'core/manage_upload_access.html', {'users': users})
@@ -569,7 +535,7 @@ def manage_upload_access(request):
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['adviser'])
+@role_required(['instructor'])
 def toggle_upload_access(request, user_id):
     profile = get_object_or_404(UserProfile, user__id=user_id, role='verified')
     profile.can_upload = not profile.can_upload
@@ -587,6 +553,11 @@ def request_access_view(request, paper_id):
     paper   = get_object_or_404(CapstonePaper, id=paper_id)
     profile = request.user.userprofile
 
+    # Instructors/Admins should NOT request access; they can view directly.
+    if profile.role in ['admin', 'instructor']:
+        messages.info(request, "Instructors and admins can view all papers without requesting access.")
+        return redirect('capstones_by_category', category=paper.category.slug)
+
     if request.method == 'POST':
         form = PaperAccessRequestForm(request.POST)
         if form.is_valid():
@@ -600,6 +571,7 @@ def request_access_view(request, paper_id):
     else:
         form = PaperAccessRequestForm()
         if profile.role == 'verified':
+            # Verified users don't need address/phone
             form.fields['address'].widget = forms.HiddenInput()
             form.fields['phone'].widget   = forms.HiddenInput()
 
@@ -608,7 +580,7 @@ def request_access_view(request, paper_id):
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['admin', 'adviser'])
+@role_required(['admin', 'instructor'])
 def access_request_list(request):
     reqs = PaperAccessRequest.objects.select_related('user', 'paper').order_by('-requested_at')
     return render(request, 'core/access_request_list.html', {'requests': reqs})
@@ -616,7 +588,7 @@ def access_request_list(request):
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['admin', 'adviser'])
+@role_required(['admin', 'instructor'])
 def approve_access_request(request, request_id):
     req = get_object_or_404(PaperAccessRequest, id=request_id)
     req.status = 'approved'
@@ -627,7 +599,7 @@ def approve_access_request(request, request_id):
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
-@role_required(['admin', 'adviser'])
+@role_required(['admin', 'instructor'])
 def reject_access_request(request, request_id):
     req = get_object_or_404(PaperAccessRequest, id=request_id)
     req.status = 'rejected'
@@ -691,21 +663,16 @@ def view_paper(request, paper_id):
     paper = get_object_or_404(CapstonePaper, id=paper_id)
 
     role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
-    is_admin_or_adv = role in ['admin', 'adviser']
-    is_uploader     = (paper.uploaded_by_id == request.user.id)
-    is_verified     = (role == 'verified')
+    is_admin_or_instr = role in ['admin', 'instructor']
+    is_uploader       = (paper.uploaded_by_id == request.user.id)
+    is_verified       = (role == 'verified')
 
-    # Admin/Adviser and Uploader: can view anything
-    if not (is_admin_or_adv or is_uploader):
-        # Verified users can view only APPROVED papers without a request
+    if not (is_admin_or_instr or is_uploader):
         if is_verified:
-            if paper.status != 'approved':
-                messages.error(request, "This paper isn't approved yet.")
-                return redirect('capstones_by_category', category=paper.category.slug)
+            # Verified users can view directly.
+            pass
         else:
-            # Non-verified: must be approved AND have approved access request
-            if paper.status != 'approved':
-                raise Http404("This paper is not available for viewing.")
+            # Non-verified must have an approved access request
             has_access = PaperAccessRequest.objects.filter(
                 user=request.user, paper=paper, status='approved'
             ).exists()
@@ -713,17 +680,14 @@ def view_paper(request, paper_id):
                 messages.error(request, "You don't have access to view this paper.")
                 return redirect('capstones_by_category', category=paper.category.slug)
 
-    # Get file
     file_field = getattr(paper, "file", None)
     if not file_field or not getattr(file_field, "name", ""):
         raise Http404("PDF not found for this paper.")
     original_pdf_path = file_field.path
 
-    # Watermark (grey, semi-opaque)
     watermark_text = "EVSU"
     watermarked_pdf = _add_watermark_to_pdf(original_pdf_path, watermark_text)
 
-    # Log view
     now = timezone.localtime()
     ay = academic_year_for(now, start_month=8)
     PaperViewEvent.objects.create(paper=paper, user=request.user, ay=ay)
@@ -731,7 +695,6 @@ def view_paper(request, paper_id):
     safe_name = slugify(paper.title) or f"paper-{paper.id}"
     filename = f"{safe_name}-watermarked.pdf"
 
-    # Force inline display
     response = FileResponse(
         watermarked_pdf,
         as_attachment=False,
@@ -740,13 +703,11 @@ def view_paper(request, paper_id):
     )
     response["Content-Disposition"] = f'inline; filename="{filename}"'
     return response
+
 # ── Trends (visible to all logged-in users) ────────────────────────────────────
 
 def _trends_qs():
-    # Only approved; ignore NULL years (works for IntegerField or CharField)
-    return (CapstonePaper.objects
-            .filter(status='approved')
-            .exclude(publication_year__isnull=True))
+    return CapstonePaper.objects.exclude(publication_year__isnull=True)
 
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
@@ -758,21 +719,14 @@ def trends_dashboard(request):
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def trends_api(request):
-    """
-    Returns:
-      - yearly: labels (years), counts
-      - stackedByCategory: labels (years), series [{name, data}]
-    """
     qs = _trends_qs()
 
-    # A) Papers per year
     yearly = (qs.values("publication_year")
                 .annotate(count=Count("id"))
                 .order_by("publication_year"))
     years = [str(r["publication_year"]) for r in yearly]
     counts = [r["count"] for r in yearly]
 
-    # B) Stacked by category per year
     by_cat_year = (qs.values("publication_year", "category__name")
                      .annotate(count=Count("id"))
                      .order_by("publication_year", "category__name"))
@@ -802,7 +756,6 @@ def most_accessed_api(request):
     if not ay:
         ay = academic_year_for(timezone.localtime(), start_month=8)
 
-    # Top 10 papers within AY
     top_qs = (
         PaperViewEvent.objects
         .filter(ay=ay)
@@ -811,7 +764,6 @@ def most_accessed_api(request):
         .order_by('-views')[:10]
     )
 
-    # Monthly trend within AY
     monthly = (
         PaperViewEvent.objects
         .filter(ay=ay)

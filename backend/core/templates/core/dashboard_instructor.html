@@ -1,20 +1,10 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<h3 class="mb-4">Welcome, Adviser</h3>
+<h3 class="mb-4">Welcome, Instructor</h3>
 
 <div class="row g-3 mb-4">
-  <!-- Pending -->
-  <div class="col-md-4">
-    <div class="card bg-warning text-dark shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">Pending Papers</h5>
-        <h3>{{ pending_count }}</h3>
-      </div>
-    </div>
-  </div>
-
   <!-- Approved -->
-  <div class="col-md-4">
+  <div class="col-md-6">
     <div class="card bg-success text-white shadow-sm">
       <div class="card-body">
         <h5 class="card-title">Approved Papers</h5>
@@ -24,7 +14,7 @@
   </div>
 
   <!-- For Revision -->
-  <div class="col-md-4">
+  <div class="col-md-6">
     <div class="card bg-orange text-white shadow-sm">
       <div class="card-body">
         <h5 class="card-title">Papers for Revision</h5>
@@ -60,7 +50,6 @@
   </div>
 </div>
 
-<!-- Mini Trend Visualization -->
 <style>
   .mini-chart { min-height: 180px; }
   .card-link { color: inherit; text-decoration: none; }
@@ -68,7 +57,6 @@
 </style>
 
 <div class="row g-3">
-  <!-- Yearly Output -->
   <div class="col-md-4">
     <a href="{% url 'trends_dashboard' %}" class="card-link">
       <div class="card shadow-sm h-100">
@@ -83,7 +71,6 @@
     </a>
   </div>
 
-  <!-- Category Trend -->
   <div class="col-md-4">
     <a href="{% url 'trends_dashboard' %}" class="card-link">
       <div class="card shadow-sm h-100">
@@ -98,7 +85,6 @@
     </a>
   </div>
 
-  <!-- Most Accessed Papers (by School Year) -->
   <div class="col-md-4">
     <a href="{% url 'trends_dashboard' %}" class="card-link">
       <div class="card shadow-sm h-100">
@@ -116,11 +102,9 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- ApexCharts CDN -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 (function () {
-  // ---- helpers ----
   async function fetchJSON(url) {
     const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(await res.text());
@@ -132,16 +116,13 @@
     return (m >= AY_START_MONTH) ? `${y}-${y+1}` : `${y-1}-${y}`;
   }
 
-  // Elements
   const elMiniYearly   = document.querySelector('#miniYearly');
   const elMiniCategory = document.querySelector('#miniCategory');
   const elMiniMostAcc  = document.querySelector('#miniMostAccessed');
   const elAyLabel      = document.querySelector('#miniAyLabel');
 
-  // ---- Yearly + Category (from trends_api) ----
   fetchJSON("{% url 'trends_api' %}")
     .then(data => {
-      // Yearly donut: uses yearly.counts + yearly.labels
       new ApexCharts(elMiniYearly, {
         chart: { type: 'donut', height: 180, sparkline: { enabled: true } },
         series: data.yearly.counts,
@@ -151,7 +132,6 @@
         tooltip: { y: { formatter: v => v } }
       }).render();
 
-      // Category line: uses stackedByCategory.series + labels
       new ApexCharts(elMiniCategory, {
         chart: { type: 'line', height: 180, sparkline: { enabled: true } },
         series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
@@ -164,7 +144,6 @@
     })
     .catch(err => console.error('trends_api error:', err));
 
-  // ---- Most Accessed (from most_accessed_api) with AY fallback ----
   const currentAY = ayFor(new Date());
   const ayCandidates = Array.from({length: 5}, (_, i) => {
     const base = parseInt(currentAY.slice(0,4)) - i;
