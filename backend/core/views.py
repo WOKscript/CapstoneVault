@@ -4,6 +4,7 @@
 import os
 import io
 import joblib
+import logging
 from datetime import datetime
 
 from django.conf import settings
@@ -14,7 +15,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Count, Q
 from django import forms
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, JsonResponse, HttpResponse
 from django.utils.text import slugify
 from django.utils import timezone
 from django.db.models.functions import TruncMonth
@@ -44,27 +45,28 @@ from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import Color
 
+# Set up logging for debugging
+logger = logging.getLogger(__name__)
+
 # ── Load ML models ─────────────────────────────────────────────────────────────
 BASE_DIR = settings.BASE_DIR
 ML_DIR = os.path.join(BASE_DIR, 'core', 'ml_models')
-tfidf_cat = joblib.load(os.path.join(ML_DIR, 'tfidf_category_2nd_ver.pkl'))
-svm_cat = joblib.load(os.path.join(ML_DIR, 'svm_category_2nd_ver.pkl'))
-tfidf_sub = joblib.load(os.path.join(ML_DIR, 'tfidf_subcategory_2nd_ver.pkl'))
-svm_sub = joblib.load(os.path.join(ML_DIR, 'svm_subcategory_2nd_ver.pkl'))
+try:
+    tfidf_cat = joblib.load(os.path.join(ML_DIR, 'tfidf_category_2nd_ver.pkl'))
+    svm_cat = joblib.load(os.path.join(ML_DIR, 'svm_category_2nd_ver.pkl'))
+    tfidf_sub = joblib.load(os.path.join(ML_DIR, 'tfidf_subcategory_2nd_ver.pkl'))
+    svm_sub = joblib.load(os.path.join(ML_DIR, 'svm_subcategory_2nd_ver.pkl'))
+except Exception:
+    tfidf_cat = svm_cat = tfidf_sub = svm_sub = None  # safe fallback
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def academic_year_for(dt, start_month=8):
     """Compute AY string like '2024-2025' given a date and start month (default: Aug)."""
     y = dt.year
-    if dt.month >= start_month:
-        return f"{y}-{y+1}"
-    return f"{y-1}-{y}"
+    return f"{y}-{y+1}" if dt.month >= start_month else f"{y-1}-{y}"
 
 def _unique_username_from_email(email: str) -> str:
-    """
-    Create a unique, slugified username based on email's local part.
-    Keeps default User model happy even if you log in via email.
-    """
+    """Create a unique, slugified username based on email's local part."""
     base = (email or "user").split("@")[0]
     base = slugify(base) or "user"
     candidate = base
@@ -97,7 +99,6 @@ def logout_view(request):
     resp['Expires'] = '0'
     return resp
 
-
 def signup_view(request):
     if request.method == 'POST':
         form = SignupForm(request.POST)
@@ -109,10 +110,8 @@ def signup_view(request):
                 return render(request, 'core/signup.html', {'form': form})
 
             user = form.save(commit=False)
-
             if not getattr(user, 'username', None):
                 user.username = _unique_username_from_email(email)
-
             user.set_password(form.cleaned_data['password'])
             user.email = email
             user.save()
@@ -195,22 +194,17 @@ def admin_dashboard(request):
     }
     return render(request, 'core/dashboard_admin.html', context)
 
-
 @never_cache
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
 @login_required
 @role_required(['instructor'])
 def instructor_dashboard(request):
-    """
-    No more 'status' field – show totals and recent items.
-    """
+    """No more 'status' field – show totals and recent items."""
     total_papers  = CapstonePaper.objects.count()
     recent_papers = CapstonePaper.objects.order_by('-uploaded_at')[:5]
-
-    # Keep template keys so existing template won't crash.
     context = {
-        'approved_count': total_papers,  # formerly 'approved'
-        'revise_count': 0,               # no 'revise' anymore
+        'approved_count': total_papers,
+        'revise_count': 0,
         'recent_papers': recent_papers,
     }
     return render(request, 'core/dashboard_instructor.html', context)
@@ -221,13 +215,8 @@ def instructor_dashboard(request):
 @role_required(['verified'])
 def verified_dashboard(request):
     user = request.user
-
-    can_upload      = bool(getattr(user.userprofile, 'can_upload', False))
-
-    context = {
-        'can_upload': can_upload,
-    }
-    return render(request, 'core/dashboard_verified.html', context)
+    can_upload = bool(getattr(user.userprofile, 'can_upload', False))
+    return render(request, 'core/dashboard_verified.html', {'can_upload': can_upload})
 
 @never_cache
 @cache_control(no_cache=True, no_store=True, must_revalidate=True, max_age=0)
@@ -240,15 +229,17 @@ def non_verified_dashboard(request):
 # ── Machine Learning Classification ────────────────────────────────────────────
 
 def classify_paper_ml(title, abstract):
-    combined = title + ' ' + abstract
+    if not (tfidf_cat and svm_cat and tfidf_sub and svm_sub):
+        # Safe fallback if models failed to load
+        return "General", "General", []
+    combined = f"{title} {abstract}"
     X_cat    = tfidf_cat.transform([combined])
     category = svm_cat.predict(X_cat)[0] if X_cat is not None else 'General'
 
     X_sub     = tfidf_sub.transform([combined])
     raw_tags  = svm_sub.predict(X_sub)[0] if X_sub is not None else ''
-    tags      = [t.strip() for t in raw_tags.split(';') if t.strip()]
+    tags      = [t.strip() for t in str(raw_tags).split(';') if t.strip()]
     subcat    = tags[0] if tags else 'General'
-
     return category, subcat, tags
 
 # ── Upload & Listing ───────────────────────────────────────────────────────────
@@ -492,7 +483,7 @@ def delete_paper_view(request, paper_id):
         if subcategory and not has_other_in_sub:
             subcategory.delete()
 
-        messages.success(request, f"“{title}” was deleted successfully.")
+        messages.success(request, f"\"{title}\" was deleted successfully.")
 
         if cat_slug and has_other_in_cat and Category.objects.filter(slug=cat_slug).exists():
             return redirect('capstones_by_category', category=cat_slug)
@@ -500,7 +491,6 @@ def delete_paper_view(request, paper_id):
 
     messages.info(request, "Deletion must be confirmed via the modal.")
     return redirect('capstones_by_category', category=paper.category.slug)
-
 
 # NEW ── Cancel upload (kept name for compatibility; no status checks anymore)
 @never_cache
@@ -607,59 +597,120 @@ def reject_access_request(request, request_id):
     messages.error(request, f"Rejected access for '{req.paper.title}' by {req.user.username}")
     return redirect('access_request_list')
 
-# ── Watermarked PDF Viewing ────────────────────────────────────────────────────
-def _merge_page(base_page, overlay_page):
+# ── Watermarked PDF Helper Functions (CORRECTED) ──────────────────────────────
+
+def _add_watermark_to_pdf_filelike(fileobj, watermark_text: str) -> io.BytesIO:
+    """Apply a single centered, bold, semi-transparent gray watermark to every page."""
+    logger.info(f"Starting watermark process (single centered watermark): '{watermark_text}'")
+
     try:
-        base_page.merge_page(overlay_page)   # PyPDF2 >= 2.x
-    except AttributeError:
-        base_page.mergePage(overlay_page)    # older PyPDF2
+        data = fileobj.read()
+        if not data:
+            raise ValueError("Empty PDF file")
 
-def _auto_font_size(w: float, h: float) -> int:
-    return max(100, min(220, int(min(w, h) * 0.14)))  # ~14%
+        src = io.BytesIO(data)
+        reader = PdfReader(src)
+        writer = PdfWriter()
 
-def _make_watermark_page(w: float, h: float, text: str, font="Helvetica-Bold"):
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=(w, h))
-    font_size = max(110, min(240, int(min(w, h) * 0.15)))
-    c.setFont(font, font_size)
-    c.saveState()
-    light_grey = Color(0.5, 0.5, 0.5, alpha=0.15)
-    c.setFillColor(light_grey)
-    c.translate(w / 2.0, h / 2.0)
-    c.drawCentredString(0, 0, text)
-    c.restoreState()
-    c.showPage()
-    c.save()
-    buf.seek(0)
-    return PdfReader(buf)
+        # Try to decrypt if encrypted
+        if getattr(reader, "is_encrypted", False):
+            try:
+                reader.decrypt("")
+            except Exception as e:
+                logger.error(f"Failed to decrypt PDF: {e}")
+                fileobj.seek(0)
+                return io.BytesIO(fileobj.read())
 
-def _add_watermark_to_pdf(input_pdf_path: str, watermark_text: str) -> io.BytesIO:
-    reader = PdfReader(input_pdf_path)
-    writer = PdfWriter()
+        success = 0
 
-    if reader.is_encrypted:
+        for page_idx, page in enumerate(reader.pages, 1):
+            # Page size
+            try:
+                mb = page.mediabox
+                w, h = float(mb.width), float(mb.height)
+            except Exception:
+                w, h = 612.0, 792.0  # letter fallback
+
+            # Create one-page watermark PDF
+            buf = io.BytesIO()
+            c = canvas.Canvas(buf, pagesize=(w, h))
+
+            # Font & size relative to page diagonal so it scales nicely
+            diag = (w ** 2 + h ** 2) ** 0.5
+            font_name = "Helvetica-Bold"
+            font_size = max(48, int(diag * 0.12))  # ~12% of diagonal
+
+            # Semi-transparent gray (with fallback if alpha unsupported)
+            try:
+                c.setFillColor(Color(0.2, 0.2, 0.2, alpha=0.18))  # gray w/ alpha
+            except Exception:
+                # Older ReportLab: fake transparency by using a very light gray
+                c.setFillColorRGB(0.8, 0.8, 0.8)
+
+            # Some builds expose setFillAlpha — use it if present for better transparency
+            if hasattr(c, "setFillAlpha"):
+                try:
+                    c.setFillAlpha(0.18)
+                except Exception:
+                    pass
+
+            c.setFont(font_name, font_size)
+
+            # Centered at page center, rotated 45°
+            text_w = c.stringWidth(watermark_text, font_name, font_size)
+            c.saveState()
+            c.translate(w / 2.0, h / 2.0)
+            c.rotate(45)
+            c.drawString(-text_w / 2.0, -font_size * 0.35, watermark_text)
+            c.restoreState()
+
+            c.showPage()
+            c.save()
+
+            # Merge onto original page
+            buf.seek(0)
+            wm_reader = PdfReader(buf)
+            wm_page = wm_reader.pages[0]
+
+            merged = False
+            try:
+                if hasattr(page, "merge_page"):
+                    page.merge_page(wm_page)   # PyPDF2 >= 2.x
+                    merged = True
+                elif hasattr(page, "mergePage"):
+                    page.mergePage(wm_page)    # PyPDF2 1.x
+                    merged = True
+                elif hasattr(page, "mergeTransformedPage"):
+                    page.mergeTransformedPage(wm_page, [1, 0, 0, 1, 0, 0])
+                    merged = True
+            except Exception as e:
+                logger.error(f"Page {page_idx}: merge failed: {e}")
+
+            if merged:
+                success += 1
+            writer.add_page(page)
+
+        out = io.BytesIO()
+        writer.write(out)
+        out.seek(0)
+        logger.info(f"Watermark complete: {success}/{len(reader.pages)} pages watermarked")
+        return out
+
+    except Exception as e:
+        logger.error(f"Watermarking failed: {e}")
         try:
-            reader.decrypt("")
+            fileobj.seek(0)
+            return io.BytesIO(fileobj.read())  # serve original if something went wrong
         except Exception:
-            raise Http404("PDF is encrypted and cannot be processed.")
+            raise Http404("Could not process PDF file")
 
-    for page in reader.pages:
-        w = float(page.mediabox.width)
-        h = float(page.mediabox.height)
-        wm_reader = _make_watermark_page(w, h, watermark_text)
-        wm_page = wm_reader.pages[0]
-        _merge_page(page, wm_page)
-        writer.add_page(page)
-
-    out = io.BytesIO()
-    writer.write(out)
-    out.seek(0)
-    return out
+# ── Secure PDF Viewing ─────────────────────────────────────────────────────────
 
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def view_paper(request, paper_id):
+    """Render the secure PDF viewer HTML template"""
     paper = get_object_or_404(CapstonePaper, id=paper_id)
 
     role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
@@ -669,10 +720,8 @@ def view_paper(request, paper_id):
 
     if not (is_admin_or_instr or is_uploader):
         if is_verified:
-            # Verified users can view directly.
-            pass
+            pass  # verified can view directly
         else:
-            # Non-verified must have an approved access request
             has_access = PaperAccessRequest.objects.filter(
                 user=request.user, paper=paper, status='approved'
             ).exists()
@@ -680,29 +729,137 @@ def view_paper(request, paper_id):
                 messages.error(request, "You don't have access to view this paper.")
                 return redirect('capstones_by_category', category=paper.category.slug)
 
-    file_field = getattr(paper, "file", None)
-    if not file_field or not getattr(file_field, "name", ""):
-        raise Http404("PDF not found for this paper.")
-    original_pdf_path = file_field.path
-
-    watermark_text = "EVSU"
-    watermarked_pdf = _add_watermark_to_pdf(original_pdf_path, watermark_text)
-
+    # Log the view event
     now = timezone.localtime()
     ay = academic_year_for(now, start_month=8)
     PaperViewEvent.objects.create(paper=paper, user=request.user, ay=ay)
 
-    safe_name = slugify(paper.title) or f"paper-{paper.id}"
-    filename = f"{safe_name}-watermarked.pdf"
+    context = {
+        'paper': paper,
+        'paper_id': paper_id,
+        'user': request.user,
+        'user_name': request.user.get_full_name() or request.user.username,
+    }
+    return render(request, 'core/secure_pdf_viewer.html', context)
 
-    response = FileResponse(
-        watermarked_pdf,
-        as_attachment=False,
-        filename=filename,
-        content_type="application/pdf",
-    )
-    response["Content-Disposition"] = f'inline; filename="{filename}"'
-    return response
+@never_cache
+@cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
+@login_required
+def serve_secure_pdf(request, paper_id):
+    """
+    Enhanced PDF serving with better watermark debugging
+    """
+    logger.info(f"Serving PDF for paper {paper_id} to user {request.user.id}")
+    
+    paper = get_object_or_404(CapstonePaper, id=paper_id)
+
+    # Access control logic
+    role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
+    is_admin_or_instr = role in ['admin', 'instructor']
+    is_uploader = (paper.uploaded_by_id == request.user.id)
+    is_verified = (role == 'verified')
+
+    if not (is_admin_or_instr or is_uploader):
+        if not is_verified:
+            has_access = PaperAccessRequest.objects.filter(
+                user=request.user, paper=paper, status='approved'
+            ).exists()
+            if not has_access:
+                raise Http404("Access denied")
+
+    file_field = getattr(paper, "file", None)
+    if not file_field or not getattr(file_field, "name", ""):
+        raise Http404("PDF not found")
+
+    safe_name = slugify(paper.title) or f"paper-{paper.id}"
+    filename = f"{safe_name}.pdf"
+
+    def _make_response(filelike):
+        resp = FileResponse(filelike, as_attachment=False, filename=filename, content_type="application/pdf")
+        resp["Content-Disposition"] = f'inline; filename="{filename}"'
+        resp['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+        resp['Pragma'] = 'no-cache'
+        resp['Expires'] = '0'
+        resp['X-Frame-Options'] = 'SAMEORIGIN'
+        resp['X-Content-Type-Options'] = 'nosniff'
+        resp['Content-Security-Policy'] = "frame-ancestors 'self'"
+        resp['Referrer-Policy'] = 'same-origin'
+        resp['Permissions-Policy'] = 'clipboard-read=(), clipboard-write=()'
+        return resp
+
+    # Debug/raw mode: serve original
+    if request.GET.get("raw") == "1":
+        logger.info("Serving raw PDF without watermark")
+        try:
+            return _make_response(file_field.open('rb'))
+        except Exception as e:
+            logger.error(f"Error serving raw PDF: {e}")
+            raise Http404("Could not stream original PDF")
+
+    # Normal mode: apply watermark
+    logger.info("Applying watermark to PDF")
+    try:
+        with file_field.open('rb') as f:
+            watermarked_pdf = _add_watermark_to_pdf_filelike(f, "EVSU")
+            logger.info("Watermark applied successfully")
+            return _make_response(watermarked_pdf)
+    except Exception as e:
+        logger.error(f"Watermarking process failed: {e}")
+        # Final fallback: serve original
+        try:
+            logger.warning("Serving original PDF as fallback")
+            return _make_response(file_field.open('rb'))
+        except Exception as fallback_error:
+            logger.error(f"Fallback also failed: {fallback_error}")
+            raise Http404("There was a problem preparing the PDF")
+
+# ── Debug Function (Remove in Production) ──────────────────────────────────────
+
+@login_required
+def debug_watermark_test(request, paper_id):
+    """Temporary debug function to test watermarking"""
+    paper = get_object_or_404(CapstonePaper, id=paper_id)
+    
+    try:
+        with paper.file.open('rb') as f:
+            original_size = len(f.read())
+            f.seek(0)
+            # Test watermark creation
+            watermarked = _add_watermark_to_pdf_filelike(f, "DEBUG TEST")
+            watermarked_size = len(watermarked.getvalue())
+            
+        return HttpResponse(f"""
+        <html>
+        <head><title>Watermark Debug</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Watermark Test Results</h2>
+            <p><strong>Paper:</strong> {paper.title}</p>
+            <p><strong>Original PDF size:</strong> {original_size:,} bytes</p>
+            <p><strong>Watermarked PDF size:</strong> {watermarked_size:,} bytes</p>
+            <p><strong>Status:</strong> {'✓ SUCCESS' if watermarked_size > 0 else '❌ FAILED'}</p>
+            <p><strong>Size difference:</strong> {watermarked_size - original_size:,} bytes</p>
+            <hr>
+            <p><strong>Test Links:</strong></p>
+            <p><a href="/papers/{paper_id}/pdf/?raw=1" target="_blank" style="margin-right: 20px;">View Original PDF</a></p>
+            <p><a href="/papers/{paper_id}/pdf/" target="_blank" style="margin-right: 20px;">View Watermarked PDF</a></p>
+            <p><a href="/papers/{paper_id}/view/" target="_blank">View in PDF Viewer</a></p>
+            <hr>
+            <p><em>Check your Django console for detailed debug logs!</em></p>
+        </body>
+        </html>
+        """, content_type='text/html')
+        
+    except Exception as e:
+        return HttpResponse(f"""
+        <html>
+        <head><title>Watermark Debug - Error</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>❌ Watermark Test Error</h2>
+            <p><strong>Error:</strong> {e}</p>
+            <p><a href="javascript:history.back()">← Go Back</a></p>
+        </body>
+        </html>
+        """, content_type='text/html')
 
 # ── Trends (visible to all logged-in users) ────────────────────────────────────
 

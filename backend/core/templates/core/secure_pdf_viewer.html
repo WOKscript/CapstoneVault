@@ -1,0 +1,415 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ paper.title|default:"Document" }} – EVSU Secure Viewer</title>
+
+  <!-- Theme includes -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+
+  <style>
+    :root{
+      --bg-body:#f8fafc; --panel:#fff; --ink:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --cv-blue:#2563eb; --cv-blue-dark:#1e40af;
+    }
+    html,body{height:100%; overflow:hidden;}
+    body{
+      margin:0; background:var(--bg-body); color:var(--ink);
+      font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none;
+    }
+
+    /* Fixed blue nav */
+    .hdr{
+      position:fixed; top:0; left:0; right:0; z-index:1030;
+      display:flex; justify-content:space-between; align-items:center; gap:16px;
+      height:56px; padding:0 16px;
+      background:linear-gradient(0deg,var(--cv-blue),var(--cv-blue-dark));
+      color:#fff; box-shadow:0 2px 10px rgba(0,0,0,.08);
+    }
+    .title{font-size:1rem; font-weight:700; margin:0; color:#fff}
+    .meta{font-size:.8rem; color:#e5edff}
+    .right{display:flex; gap:8px; align-items:center}
+    .badge-protected{font-size:.7rem}
+    .btn-plain{
+      display:inline-flex; align-items:center; gap:.35rem;
+      padding:.45rem .75rem; border-radius:999px; font-size:.9rem; text-decoration:none;
+      color:#fff; border:1px solid rgba(255,255,255,.65); background:transparent;
+    }
+    .btn-plain:hover{background:rgba(255,255,255,.12); color:#fff; border-color:#fff}
+
+    /* Stage under the fixed nav */
+    .stage{
+      position:fixed; top:56px; left:0; right:0; bottom:0;
+      display:flex; flex-direction:column;
+    }
+
+    /* Toolbar */
+    .toolbar{
+      flex:0 0 52px; display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+      padding:.5rem 1rem; background:var(--panel); border-bottom:1px solid var(--border);
+    }
+    .toolbar .btn{ border-radius:.5rem; }
+    .tool-sep{ width:1px; height:28px; background:var(--border); margin:0 .25rem }
+    .page-info{ font-size:.9rem; color:var(--muted) }
+    .page-input{
+      width:72px; padding:.35rem .5rem; border-radius:.5rem;
+      background:#fff; color:var(--ink); border:1px solid var(--border); font-size:.9rem;
+    }
+
+    /* Viewer (only scrollable area) */
+    .viewer-wrap{
+      position:relative;
+      flex:1 1 auto; overflow:auto;
+      background:linear-gradient(180deg,#f1f5f9 0%, #eef2f7 100%);
+      border-top:1px solid var(--border);
+      display:flex; justify-content:center; align-items:flex-start; padding:16px 0;
+    }
+    .page{ display:flex; justify-content:center; padding:20px 0 }
+    canvas{
+      background:#fff; border-radius:12px;
+      box-shadow:0 10px 30px rgba(2,6,23,.08), 0 0 0 1px rgba(15,23,42,.04) inset;
+    }
+
+    /* Centered loading overlay — NO BOX */
+    .loading-overlay{
+      position:absolute; inset:0; z-index:5;
+      display:flex; align-items:center; justify-content:center; flex-direction:column;
+      background:rgba(248,250,252,0.65);
+      backdrop-filter:saturate(140%) blur(1.5px);
+      transition:opacity .2s ease, visibility .2s ease;
+    }
+    .loading-overlay.hide{ opacity:0; visibility:hidden; }
+    .spinner-border{ width:2.75rem; height:2.75rem; color:var(--cv-blue); }
+    .loading-text{ margin-top:.75rem; font-size:.9rem; color:var(--muted); }
+
+    /* ANTI-SHOT overlay (pure white cover above canvas) */
+    .anti-shot{
+      position:absolute; inset:0; z-index:6;
+      background:#fff; /* white-out */
+      opacity:0; visibility:hidden; transition:opacity .12s ease, visibility .12s ease;
+      pointer-events:none;
+    }
+    .anti-shot.on{ opacity:1; visibility:visible; }
+
+    .hint{ padding:10px 16px; color:var(--muted); font-size:.85rem }
+    .error{ color:#dc2626 }
+    *,*::before,*::after{-webkit-user-drag:none; user-drag:none}
+
+    /* Debug info */
+    .debug-info{
+      position:fixed; bottom:10px; left:10px; max-width:42%;
+      background:#fff; border:1px solid var(--border); padding:10px; border-radius:8px;
+      font-family:monospace; font-size:11px; z-index:1040;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FIXED BLUE NAV -->
+  <div class="hdr">
+    <div>
+      <div class="title d-flex align-items-center gap-2">
+        <i class="bi bi-journal-bookmark-fill text-warning"></i>
+        <span>{{ paper.title|default:"Document" }}</span>
+      </div>
+      <div class="meta">
+        {% if paper.authors %}by {{ paper.authors }}{% endif %}
+        {% if paper.publication_year %} • {{ paper.publication_year }}{% endif %}
+      </div>
+    </div>
+    <div class="right">
+      <span class="badge rounded-pill text-bg-light text-dark badge-protected">Protected</span>
+      {% if paper.category %}
+        <a class="btn-plain" href="{% url 'capstones_by_category' category=paper.category.slug %}"
+           id="backSamePage" data-fallback-url="{% url 'capstones_by_category' category=paper.category.slug %}">
+          <i class="bi bi-arrow-left"></i> Back to list
+        </a>
+      {% else %}
+        <a class="btn-plain" href="#" id="backSamePage">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Stage directly under the fixed nav -->
+  <div class="stage">
+    <div class="toolbar">
+      <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
+        <button class="btn btn-outline-secondary" id="zoomOut" title="Zoom out">−</button>
+        <span class="btn btn-outline-secondary disabled" id="zoomLabel" style="pointer-events:none;">100%</span>
+        <button class="btn btn-outline-secondary" id="zoomIn" title="Zoom in">+</button>
+      </div>
+
+      <div class="tool-sep"></div>
+
+      <span class="page-info">Page</span>
+      <input class="page-input" id="pageNumber" type="number" min="1" value="1">
+      <span class="page-info">/ <span id="pageCount">?</span></span>
+
+      <div class="btn-group btn-group-sm ms-1" role="group" aria-label="Paging">
+        <button class="btn btn-outline-secondary" id="prevPage" title="Previous page">←</button>
+        <button class="btn btn-outline-secondary" id="nextPage" title="Next page">→</button>
+      </div>
+
+      <div id="msg" class="ms-auto small text-muted"></div>
+    </div>
+
+    <div id="viewer" class="viewer-wrap">
+      <!-- Centered loading overlay (no box) -->
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border" role="status" aria-label="Loading"></div>
+        <div class="loading-text">Preparing document…</div>
+      </div>
+
+      <!-- ANTI-SHOT whiteout -->
+      <div id="antiShot" class="anti-shot"></div>
+      <!-- Canvas/pages injected here -->
+    </div>
+  </div>
+
+  {% if debug %}
+  <div class="debug-info">
+    Paper ID: {{ paper.id|default:"NOT_FOUND" }}<br>
+    PDF URL: {% url 'serve_secure_pdf' paper_id=paper.id %}<br>
+    User: {{ user.username }}
+  </div>
+  {% endif %}
+
+  <!-- PDF.js + Bootstrap -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    if (typeof pdfjsLib === 'undefined') {
+      console.error('PDF.js failed to load from CDN');
+      const txt = document.querySelector('#loadingOverlay .loading-text');
+      if (txt) txt.textContent = 'Failed to load PDF.js. Please refresh.';
+    } else {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      initPDFViewer();
+    }
+
+    function initPDFViewer() {
+      // Best-effort protection: block common shortcuts
+      const block = (e)=>{ e.preventDefault(); e.stopPropagation(); return false; };
+      document.addEventListener('contextmenu', block, true);
+      document.addEventListener('selectstart', block, true);
+      document.addEventListener('copy', block, true);
+      document.addEventListener('cut', block, true);
+      document.addEventListener('paste', block, true);
+      document.addEventListener('keydown', function(e){
+        const k=e.key.toLowerCase(), ctrl=e.ctrlKey||e.metaKey, sh=e.shiftKey;
+        if (ctrl && (k==='c'||k==='x'||k==='s'||k==='p'||k==='u'||k==='a'||k==='f'||k==='g'||k==='+'||k==='-'||k==='0')
+            || e.key==='PrintScreen' || (ctrl&&sh&&(k==='i'||k==='j'||k==='c'))) block(e);
+      }, true);
+
+      const RAW_URL = "{% url 'serve_secure_pdf' paper_id=paper.id %}?v={{ paper.updated_at|default:paper.uploaded_at|date:'U'|default:'0' }}";
+
+      const viewer = document.getElementById('viewer');
+      const overlay = document.getElementById('loadingOverlay');
+      const antiShot = document.getElementById('antiShot'); // ANTI-SHOT
+      const msg = document.getElementById('msg');
+      const zoomInBtn = document.getElementById('zoomIn');
+      const zoomOutBtn = document.getElementById('zoomOut');
+      const zoomLabel = document.getElementById('zoomLabel');
+      const pageNumberInput = document.getElementById('pageNumber');
+      const pageCountSpan = document.getElementById('pageCount');
+      const prevBtn = document.getElementById('prevPage');
+      const nextBtn = document.getElementById('nextPage');
+
+      let pdfDoc=null, scale=1.1, minScale=0.6, maxScale=2.0, step=0.15;
+      const state={rendering:false,pending:null,current:1, firstPaint:false};
+
+      function fitToWidth(viewportWidth){
+        const container = viewer.clientWidth || window.innerWidth;
+        const s = container / viewportWidth;
+        return Math.min(maxScale, Math.max(minScale, s));
+      }
+
+      function hideOverlay(){
+        if (!overlay) return;
+        overlay.classList.add('hide');
+        setTimeout(()=>{ if (overlay) overlay.style.display = 'none'; }, 220);
+      }
+
+      /* ========== ANTI-SHOT HELPERS ========== */
+      const showWhiteout = ()=> antiShot && antiShot.classList.add('on');
+      const hideWhiteout = ()=> antiShot && antiShot.classList.remove('on');
+
+      // Whiteout whenever the page/tab is not visible or window loses focus
+      document.addEventListener('visibilitychange', ()=>{
+        if (document.visibilityState !== 'visible') showWhiteout();
+        else hideWhiteout();
+      });
+      window.addEventListener('blur', showWhiteout);
+      window.addEventListener('focus', hideWhiteout);
+
+      // Whiteout if the mouse leaves the window (helps with Win+Shift+S which often steals focus)
+      let leaveTimer=null;
+      window.addEventListener('mouseleave', ()=>{
+        clearTimeout(leaveTimer);
+        leaveTimer=setTimeout(showWhiteout, 50);
+      });
+      window.addEventListener('mouseenter', ()=>{
+        clearTimeout(leaveTimer);
+        hideWhiteout();
+      });
+
+      // Extra: If PrintScreen is detected (some browsers deliver it), blank immediately
+      window.addEventListener('keydown', (e)=>{
+        if (e.key === 'PrintScreen') showWhiteout();
+      }, true);
+      /* ======================================= */
+
+      const renderPage = (num)=>{
+        if (!pdfDoc) return;
+        state.rendering = true;
+
+        pdfDoc.getPage(num).then(page=>{
+          if (num===1 && scale === 'auto') {
+            const v1 = page.getViewport({ scale: 1 });
+            scale = fitToWidth(v1.width);
+            updateZoom();
+          }
+          const viewport = page.getViewport({ scale: typeof scale==='number'? scale : 1 });
+          const wrap = document.createElement('div');
+          wrap.className='page';
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          wrap.appendChild(canvas);
+
+          viewer.innerHTML='';
+          viewer.appendChild(wrap);
+
+          const ctx = canvas.getContext('2d', {alpha:false});
+          return page.render({canvasContext:ctx, viewport}).promise;
+        }).then(()=>{
+          state.rendering=false;
+          pageNumberInput.value=num;
+          state.current=num;
+          updateButtons();
+
+          if (!state.firstPaint){
+            state.firstPaint = true;
+            hideOverlay();
+          }
+
+          if (state.pending){ const p=state.pending; state.pending=null; renderPage(p); }
+        }).catch(err => {
+          state.rendering = false;
+          msg.classList.add('text-danger');
+          msg.textContent = `Error rendering page ${num}: ${err.message}`;
+          hideOverlay();
+        });
+      };
+
+      const updateButtons = () => {
+        if (!pdfDoc) return;
+        prevBtn.disabled = state.current <= 1;
+        nextBtn.disabled = state.current >= pdfDoc.numPages;
+      };
+
+      const queueRender = (n)=>{ 
+        if (n < 1 || (pdfDoc && n > pdfDoc.numPages)) return;
+        state.rendering ? state.pending=n : renderPage(n);
+      };
+
+      const updateZoom = ()=>{ 
+        zoomLabel.textContent = Math.round((typeof scale==='number'? scale:1)*100)+'%';
+      };
+
+      fetch(RAW_URL, { credentials:'same-origin', headers:{ 'Accept':'application/pdf' } })
+        .then(async r => {
+          if (!r.ok) {
+            const t = await r.text().catch(()=> '');
+            throw new Error(`HTTP ${r.status} ${r.statusText} ${t ? '· '+t.slice(0,180) : ''}`);
+          }
+          return r.arrayBuffer();
+        })
+        .then(buf=>{
+          if (buf.byteLength === 0) throw new Error('Empty PDF file received');
+          return pdfjsLib.getDocument({ data:new Uint8Array(buf), verbosity:0 }).promise;
+        })
+        .then(doc=>{
+          pdfDoc = doc;
+          pageCountSpan.textContent = doc.numPages;
+          pageNumberInput.max = doc.numPages;
+          scale = 'auto';
+          renderPage(1);
+        })
+        .catch(err=>{
+          msg.classList.add('text-danger');
+          msg.innerHTML = `Failed to load document: ${err.message} · <a href="${RAW_URL}">Open directly</a>`;
+          hideOverlay();
+        });
+
+      zoomInBtn.addEventListener('click', ()=>{ if (!pdfDoc) return;
+        if (scale === 'auto') scale = 1.1;
+        scale = Math.min(maxScale, (scale||1)+step); updateZoom(); queueRender(state.current);
+      });
+      zoomOutBtn.addEventListener('click', ()=>{ if (!pdfDoc) return;
+        if (scale === 'auto') scale = 1.0;
+        scale = Math.max(minScale, (scale||1)-step); updateZoom(); queueRender(state.current);
+      });
+      prevBtn.addEventListener('click', ()=>{ if (pdfDoc && state.current > 1) queueRender(state.current-1); });
+      nextBtn.addEventListener('click', ()=>{ if (pdfDoc && state.current < pdfDoc.numPages) queueRender(state.current+1); });
+      pageNumberInput.addEventListener('change', ()=>{ if (!pdfDoc) return;
+        let n = parseInt(pageNumberInput.value||'1', 10);
+        n = Math.min(Math.max(1, n), pdfDoc.numPages);
+        queueRender(n);
+      });
+
+      // Responsive fit
+      let resizeTimer = null;
+      window.addEventListener('resize', ()=>{
+        if (!pdfDoc) return;
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(()=>{
+          pdfDoc.getPage(state.current).then(p=>{
+            const v1 = p.getViewport({ scale: 1 });
+            scale = fitToWidth(v1.width);
+            updateZoom();
+            queueRender(state.current);
+          });
+        }, 150);
+      });
+    }
+
+    // SAME-PAGE-ONLY BEHAVIOR (no new tabs / same page navigation)
+    (function(){
+      const back = document.getElementById('backSamePage');
+      if (back) {
+        back.addEventListener('click', function(e){
+          e.preventDefault();
+          if (history.length > 1) {
+            history.back();
+          } else {
+            const fb = back.getAttribute('data-fallback-url');
+            if (fb) location.href = fb; else location.href = '/';
+          }
+        });
+      }
+
+      document.addEventListener('click', function(e){
+        const a = e.target.closest('a');
+        if (!a) return;
+        if (a.target) a.removeAttribute('target');
+        try{
+          const dest = new URL(a.href, location.href);
+          const here = new URL(location.href);
+          if (dest.href === here.href) { e.preventDefault(); }
+        }catch(_){}
+      }, true);
+    })();
+  </script>
+</body>
+</html>

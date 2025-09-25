@@ -20,15 +20,85 @@
     }
     .muted { color: rgba(0,0,0,.6); }
     .chip { background:#f8f9fa; border:1px solid #e9ecef; border-radius:9999px; padding:.2rem .6rem; font-size:.75rem; }
-    .card-clean { border:0; box-shadow:0 .25rem .75rem rgba(0,0,0,.06); transition:transform .06s ease, box-shadow .2s ease; }
-    .card-clean:hover { transform:translateY(-2px); box-shadow:0 .6rem 1.2rem rgba(0,0,0,.09); }
+    .card-clean { 
+      border:0; 
+      box-shadow:0 .125rem .25rem rgba(0,0,0,.075); 
+      transition:transform .15s ease, box-shadow .15s ease; 
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card-clean:hover { 
+      transform:translateY(-2px); 
+      box-shadow:0 .5rem 1rem rgba(0,0,0,.15); 
+    }
     .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .tag { font-size:.75rem; background:#eef2f6; color:#1f2a37; }
+    .tag { 
+      font-size:.7rem; 
+      background:#e3f2fd; 
+      color:#1565c0; 
+      border: 1px solid #bbdefb;
+      border-radius: 12px;
+      padding: .2rem .5rem;
+    }
     .tag-wrap { max-height:56px; overflow:auto; }
-    .card-footer { background:transparent; border-top:0; }
+    .card-footer { background:transparent; border-top:1px solid #f1f3f4; padding: 1rem; }
 
-    .actions { gap:.5rem; white-space:nowrap; width:100%; }
-    .actions .btn-fill { flex: 1 1 auto; min-width: 0; }
+    .paper-card-header {
+      background: #4285f4;
+      color: white;
+      padding: 1rem;
+      position: relative;
+    }
+    .paper-title {
+      font-weight: 600;
+      font-size: 1rem;
+      line-height: 1.3;
+      margin-bottom: .5rem;
+    }
+    .paper-meta {
+      font-size: .8rem;
+      opacity: .9;
+    }
+    .paper-authors {
+      font-size: .8rem;
+      color: #666;
+      margin-bottom: .75rem;
+    }
+
+    .actions { 
+      gap: .75rem; 
+      display: flex;
+      flex-direction: column;
+    }
+    .btn-view-pdf {
+      background: #4285f4;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: .75rem 1.5rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      transition: all .2s ease;
+      box-shadow: 0 2px 4px rgba(66, 133, 244, .2);
+    }
+    .btn-view-pdf:hover {
+      background: #3367d6;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(66, 133, 244, .3);
+      color: white;
+    }
+    .btn-secondary-actions {
+      display: flex;
+      gap: .5rem;
+      justify-content: space-between;
+    }
+    .btn-secondary-actions .btn {
+      flex: 1;
+      font-size: .8rem;
+      padding: .4rem .8rem;
+      border-radius: 6px;
+    }
+    
     .modal-body p { text-align: justify; }
   </style>
 
@@ -83,14 +153,19 @@
       {% for paper in papers %}
         <div class="col">
           <div class="card card-clean h-100">
-            <div class="card-body d-flex flex-column">
-              <h6 class="mb-1 line-clamp-2">{{ paper.title }}</h6>
-              <div class="muted small mb-2">
+            <!-- Paper Header -->
+            <div class="paper-card-header">
+              <div class="paper-title line-clamp-2">{{ paper.title }}</div>
+              <div class="paper-meta">
                 {{ paper.publication_year }} • {{ paper.category.name }}{% if paper.subcategory %} / {{ paper.subcategory.name }}{% endif %}
               </div>
-              <div class="muted small mb-3">
-                Authors: {{ paper.authors }}{% if paper.adviser %} • Adviser: {{ paper.adviser }}{% endif %}
+            </div>
+
+            <div class="card-body d-flex flex-column">
+              <div class="paper-authors">
+                <strong>Authors:</strong> {{ paper.authors }}{% if paper.adviser %}<br><strong>Adviser:</strong> {{ paper.adviser }}{% endif %}
               </div>
+              
               {% if paper.tags.all %}
                 <div class="tag-wrap d-flex flex-wrap gap-1 mt-auto">
                   {% for tag in paper.tags.all %}
@@ -101,42 +176,58 @@
             </div>
 
             <div class="card-footer">
-              <div class="actions d-flex align-items-stretch flex-nowrap">
+              <div class="actions">
                 {% with role=request.user.userprofile.role %}
-                  {# Admins & Instructors: always View + Edit + Delete #}
+                  {# Main action button #}
                   {% if role == 'admin' or role == 'instructor' %}
-                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
-                    <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
-                    <button type="button" class="btn btn-outline-danger btn-sm"
-                            data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                    <div class="btn-secondary-actions">
+                      <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
+                      <button type="button" class="btn btn-outline-danger btn-sm"
+                              data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm"
+                              data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                    </div>
 
-                  {# Verified uploader: can View/Edit/Delete own paper #}
                   {% elif role == 'verified' and request.user == paper.uploaded_by %}
-                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
-                    <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
-                    <button type="button" class="btn btn-outline-danger btn-sm"
-                            data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                    <div class="btn-secondary-actions">
+                      <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
+                      <button type="button" class="btn btn-outline-danger btn-sm"
+                              data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                      <button type="button" class="btn btn-outline-secondary btn-sm"
+                              data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                    </div>
 
-                  {# Verified (not uploader): view only when approved; no request flow #}
                   {% elif role == 'verified' %}
                     {% if paper.status == 'approved' %}
-                      <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
+                      <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                      <div class="btn-secondary-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                      </div>
                     {% else %}
-                      <span class="badge bg-secondary align-self-center">Not approved yet</span>
+                      <div class="text-center py-2">
+                        <span class="badge bg-secondary">Not approved yet</span>
+                      </div>
+                      <div class="btn-secondary-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                      </div>
                     {% endif %}
 
-                  {# Non-verified: request flow #}
                   {% else %}
                     {% if paper.id in approved_access_ids %}
-                      <a href="{% url 'view_paper' paper.id %}" class="btn btn-primary btn-sm btn-fill" target="_blank">View PDF</a>
+                      <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
                     {% else %}
-                      <a href="{% url 'request_access' paper.id %}" class="btn btn-warning btn-sm btn-fill">Request Access</a>
+                      <a href="{% url 'request_access' paper.id %}" class="btn btn-view-pdf w-100" style="background: #ff9800; color: white;">Request Access</a>
                     {% endif %}
+                    <div class="btn-secondary-actions">
+                      <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                              data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                    </div>
                   {% endif %}
                 {% endwith %}
-
-                <button type="button" class="btn btn-outline-secondary btn-sm"
-                        data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
               </div>
             </div>
           </div>
@@ -173,7 +264,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                Are you sure you want to delete “<strong>{{ paper.title }}</strong>”?
+                Are you sure you want to delete "<strong>{{ paper.title }}</strong>"?
                 This action cannot be undone.
               </div>
               <div class="modal-footer">
