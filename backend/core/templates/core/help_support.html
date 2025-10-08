@@ -1,0 +1,87 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Help & Support · CapstoneVault{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="#" class="text-decoration-none">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Help & Support</li>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px;">
+  <div class="row g-4">
+    <!-- FAQ -->
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body p-5">
+          <h4 class="fw-bold mb-4">Frequently Asked Questions</h4>
+          <div class="accordion" id="faqAcc">
+            {% for item in faqs %}
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="faq-{{ forloop.counter }}">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#faq-body-{{ forloop.counter }}">
+                  {{ item.q }}
+                </button>
+              </h2>
+              <div id="faq-body-{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                   data-bs-parent="#faqAcc">
+                <div class="accordion-body">
+                  {{ item.a }}
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <p class="text-muted">No FAQs yet.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact / Support -->
+    <div class="col-lg-5">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body p-5">
+          <h4 class="fw-bold mb-3">Contact Support</h4>
+          <p class="text-muted">
+            Can’t find what you need? Send us a message and we’ll follow up.
+          </p>
+
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-12">
+              <label class="form-label fw-medium">Subject</label>
+              {{ form.subject }}
+              {% for e in form.subject.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Message</label>
+              {{ form.message }}
+              {% for e in form.message.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Page (optional)</label>
+              {{ form.page }}
+              {% for e in form.page.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary px-4 py-2">
+                <i class="bi bi-send me-2"></i>Send
+              </button>
+            </div>
+          </form>
+
+          <hr class="my-4">
+
+          <div class="d-flex align-items-center gap-2 text-muted small">
+            <i class="bi bi-shield-check"></i>
+            Your ticket is recorded in Audit Logs as <code>support_request</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

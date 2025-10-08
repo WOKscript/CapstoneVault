@@ -12,9 +12,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+SETTINGS_DIR = Path(__file__).resolve().parent   
+load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -105,7 +108,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 USE_I18N = True
 USE_TZ = True
 
@@ -161,7 +164,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
+        'file': { 
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'debug.log',
             'formatter': 'verbose',
@@ -184,3 +187,58 @@ LOGGING = {
         },
     },
 }
+
+# --- Robust .env loading (works regardless of where you place the file) ---
+try:
+    from dotenv import load_dotenv, find_dotenv
+    # First try: alongside settings.py
+    env_path_here = Path(__file__).resolve().parent / ".env"
+    # Fallback: project BASE_DIR (one level up)
+    env_path_base = Path(__file__).resolve().parent.parent / ".env"
+
+    dotenv_path = None
+    if env_path_here.exists():
+        dotenv_path = env_path_here
+    elif env_path_base.exists():
+        dotenv_path = env_path_base
+    else:
+        # Final fallback: search upwards
+        found = find_dotenv()
+        dotenv_path = Path(found) if found else None
+
+    if dotenv_path and Path(dotenv_path).exists():
+        load_dotenv(dotenv_path, override=True)
+    else:
+        print("[ENV WARNING] .env not found near settings.py or BASE_DIR.")
+except Exception as e:
+    print("[ENV WARNING] python-dotenv not available or failed:", e)
+
+MAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 30
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")          # must not be None
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")  # must be 16-char App Password
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or (
+    f"CapstoneVault <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else None
+)
+
+# Hard fail if missing to avoid 'CapstoneVault <None>'
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD or not DEFAULT_FROM_EMAIL:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "Email config incomplete. Set EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, and DEFAULT_FROM_EMAIL in your .env"
+    )
+
+# Optional one-time debug
+print(
+    "[EMAIL DEBUG] USER:", EMAIL_HOST_USER,
+    " PASS_SET:", bool(EMAIL_HOST_PASSWORD),
+    " FROM:", DEFAULT_FROM_EMAIL
+)
+
+
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "your-prod-domain.com"]
+CSRF_TRUSTED_ORIGINS = ["https://your-prod-domain.com", "http://localhost", "http://127.0.0.1"]

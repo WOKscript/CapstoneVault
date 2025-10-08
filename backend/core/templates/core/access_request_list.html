@@ -1,68 +1,664 @@
 {% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Access Requests - CapstoneVault{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+<li class="breadcrumb-item active" aria-current="page">Access Requests</li>
+{% endblock %}
 
 {% block content %}
-<div class="container py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Access Requests</h3>
-    <span class="text-muted small">Manage and review paper view requests</span>
+<div class="access-requests-page">
+
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="mb-1 fw-bold text-primary">Access Requests</h3>
+      <p class="text-muted small mb-0">Manage paper view permissions and expirations</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary btn-sm rounded-pill" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
   </div>
 
-  {% if requests %}
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover align-middle">
-        <thead class="table-dark">
-          <tr class="text-center">
-            <th>User</th>
-            <th>Paper</th>
-            <th>Reason</th>
-            <th>Address</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th>Requested At</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for req in requests %}
-          <tr>
-            <td class="fw-semibold">{{ req.user.get_full_name|default:req.user.username }}</td>
-            <td>{{ req.paper.title }}</td>
-            <td style="max-width: 300px; white-space: pre-wrap;">{{ req.reason }}</td>
-            <td>{{ req.address|default:"—" }}</td>
-            <td>{{ req.phone|default:"—" }}</td>
-            <td class="text-center">
-              {% if req.status == 'approved' %}
-                <span class="badge bg-success px-2 py-1">Approved</span>
-              {% elif req.status == 'rejected' %}
-                <span class="badge bg-danger px-2 py-1">Rejected</span>
-              {% else %}
-                <span class="badge bg-warning text-dark px-2 py-1">Pending</span>
-              {% endif %}
-            </td>
-            <td>{{ req.requested_at|date:"M d, Y - H:i" }}</td>
-            <td class="text-center">
-              {% if req.status == 'pending' %}
-                <div class="btn-group btn-group-sm" role="group">
-                  <a href="{% url 'approve_access_request' req.id %}" class="btn btn-success">
-                    <i class="bi bi-check-circle"></i> Approve
-                  </a>
-                  <a href="{% url 'reject_access_request' req.id %}" class="btn btn-danger">
-                    <i class="bi bi-x-circle"></i> Reject
-                  </a>
-                </div>
-              {% else %}
-                <span class="text-muted small">No action</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- Statistics Cards (clickable filters) -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}" class="text-decoration-none d-block">
+        <div class="card border-0 shadow-sm h-100 bg-primary">
+          <div class="card-body text-white d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-white mb-1 small text-uppercase fw-semibold">Total Requests</h6>
+              <h3 class="mb-0 fw-bold text-white">{{ counts.total|default:0 }}</h3>
+              <p class="mb-0 small text-white">All time</p>
+            </div>
+            <i class="bi bi-inboxes fs-1 opacity-25"></i>
+          </div>
+        </div>
+      </a>
     </div>
-  {% else %}
-    <div class="alert alert-light border">
-      No access requests have been submitted yet.
+
+    <div class="col-xl-3 col-md-6">
+      <a href="?status=pending{% if q %}&q={{ q|urlencode }}{% endif %}" class="text-decoration-none d-block">
+        <div class="card border-0 shadow-sm h-100 bg-primary">
+          <div class="card-body text-white d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-white mb-1 small text-uppercase fw-semibold">Pending</h6>
+              <h3 class="mb-0 fw-bold text-white">{{ counts.pending|default:0 }}</h3>
+              <p class="mb-0 small text-white">Awaiting review</p>
+            </div>
+            <i class="bi bi-hourglass-split fs-1 opacity-25"></i>
+          </div>
+        </div>
+      </a>
     </div>
-  {% endif %}
+
+    <div class="col-xl-3 col-md-6">
+      <a href="?status=approved{% if q %}&q={{ q|urlencode }}{% endif %}" class="text-decoration-none d-block">
+        <div class="card border-0 shadow-sm h-100 bg-primary">
+          <div class="card-body text-white d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-white mb-1 small text-uppercase fw-semibold">Approved</h6>
+              <h3 class="mb-0 fw-bold text-white">{{ counts.approved|default:0 }}</h3>
+              <p class="mb-0 small text-white">Active & expired</p>
+            </div>
+            <i class="bi bi-check2-circle fs-1 opacity-25"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <a href="?status=rejected{% if q %}&q={{ q|urlencode }}{% endif %}" class="text-decoration-none d-block">
+        <div class="card border-0 shadow-sm h-100 bg-primary">
+          <div class="card-body text-white d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-white mb-1 small text-uppercase fw-semibold">Rejected</h6>
+              <h3 class="mb-0 fw-bold text-white">{{ counts.rejected|default:0 }}</h3>
+              <p class="mb-0 small text-white">Declined requests</p>
+            </div>
+            <i class="bi bi-x-octagon fs-1 opacity-25"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-lg-5">
+          <label class="form-label small fw-semibold text-muted mb-1">Search Requests</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" name="q" value="{{ q }}" class="form-control border-start-0 ps-0"
+                   placeholder="User, email, paper title, or reason">
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <label class="form-label small fw-semibold text-muted mb-1">Filter by Status</label>
+          <div class="btn-group w-100" role="group">
+            <a class="btn btn-sm {% if not status_f %}btn-primary{% else %}btn-outline-primary{% endif %}"
+               href="?{% if q %}q={{ q|urlencode }}{% endif %}">All</a>
+            <a class="btn btn-sm {% if status_f == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+               href="?status=pending{% if q %}&q={{ q|urlencode }}{% endif %}">Pending</a>
+            <a class="btn btn-sm {% if status_f == 'approved' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+               href="?status=approved{% if q %}&q={{ q|urlencode }}{% endif %}">Approved</a>
+            <a class="btn btn-sm {% if status_f == 'rejected' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+               href="?status=rejected{% if q %}&q={{ q|urlencode }}{% endif %}">Rejected</a>
+          </div>
+        </div>
+
+        <div class="col-lg-3">
+          <button class="btn btn-primary w-100">
+            <i class="bi bi-funnel me-1"></i> Apply
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Requests Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-semibold">All Requests</h6>
+        {% if requests %}
+          <small class="text-muted">Showing {{ requests|length }} request{% if requests|length != 1 %}s{% endif %}</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      {% if requests %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 req-table">
+          <!-- Column widths to prevent overlap -->
+          <colgroup>
+            <col style="width: 22%;">  {# User #}
+            <col style="width: 30%;">  {# Paper #}
+            <col style="width: 13%;">  {# Status #}
+            <col style="width: 13%;">  {# Requested #}
+            <col style="width: 22%;">  {# Actions #}
+          </colgroup>
+          <thead class="bg-light">
+            <tr>
+              <th class="border-0 px-4 py-3"><small class="fw-semibold text-muted text-uppercase">User</small></th>
+              <th class="border-0 px-4 py-3"><small class="fw-semibold text-muted text-uppercase">Paper</small></th>
+              <th class="border-0 px-4 py-3"><small class="fw-semibold text-muted text-uppercase">Status</small></th>
+              <th class="border-0 px-4 py-3"><small class="fw-semibold text-muted text-uppercase">Requested</small></th>
+              <th class="border-0 px-4 py-3 text-center"><small class="fw-semibold text-muted text-uppercase">Actions</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% now "U" as NOW_TS %}
+            {% for r in requests %}
+              {% with exp_ts=r.expires_at|date:"U" %}
+              <tr class="row-divider">
+                <!-- USER -->
+                <td class="px-4 py-3">
+                  <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-3 bg-primary text-white fw-semibold">
+                      {{ r.user.username|slice:":1"|upper }}
+                    </div>
+                    <div class="user-info">
+                      <div class="fw-semibold user-name" title="{{ r.user.username }}">{{ r.user.username }}</div>
+                      <small class="text-muted user-email d-block" title="{{ r.user.email }}">{{ r.user.email }}</small>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- PAPER -->
+                <td class="px-4 py-3">
+                  <div class="paper-cell">
+                    <div class="fw-semibold text-ellipsis paper-title" title="{{ r.paper.title }}">{{ r.paper.title }}</div>
+                    {% if r.paper.authors %}
+                      <small class="text-muted authors-ellipsis d-block" title="{{ r.paper.authors }}">{{ r.paper.authors }}</small>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <!-- STATUS -->
+                <td class="px-4 py-3 text-nowrap">
+                  {% if r.status == 'pending' %}
+                    <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning">
+                      <i class="bi bi-hourglass me-1"></i>Pending
+                    </span>
+                  {% elif r.status == 'approved' %}
+                    {% if r.expires_at and exp_ts < NOW_TS %}
+                      <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary">
+                        <i class="bi bi-calendar-x me-1"></i>Expired
+                      </span>
+                    {% else %}
+                      <span class="badge rounded-pill bg-success-subtle text-success border border-success">
+                        <i class="bi bi-check-circle me-1"></i>Approved
+                      </span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger">
+                      <i class="bi bi-x-circle me-1"></i>Rejected
+                    </span>
+                  {% endif %}
+                </td>
+
+                <!-- REQUESTED DATE -->
+                <td class="px-4 py-3 text-nowrap small text-muted">
+                  {{ r.requested_at|date:"M d, Y" }}<br>
+                  <span class="text-muted opacity-75">{{ r.requested_at|date:"h:i A" }}</span>
+                </td>
+
+                <!-- ACTIONS -->
+                <td class="px-4 py-3 text-center">
+                  <button 
+                    class="btn btn-sm btn-outline-primary rounded-pill"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#detailsModal"
+                    data-id="{{ r.id }}"
+                    data-user="{{ r.user.username }}"
+                    data-email="{{ r.user.email }}"
+                    data-paper="{{ r.paper.title }}"
+                    data-authors="{{ r.paper.authors }}"
+                    data-reason="{{ r.reason }}"
+                    data-status="{{ r.status }}"
+                    data-requested="{{ r.requested_at|date:'M d, Y h:i A' }}"
+                    data-approved="{% if r.approved_at %}{{ r.approved_at|date:'M d, Y h:i A' }}{% else %}—{% endif %}"
+                    data-expires="{% if r.expires_at %}{{ r.expires_at|date:'M d, Y h:i A' }}{% else %}—{% endif %}"
+                    data-isexpired="{% if r.expires_at and exp_ts < NOW_TS %}true{% else %}false{% endif %}">
+                    <i class="bi bi-eye me-1"></i>View
+                  </button>
+                </td>
+              </tr>
+              {% endwith %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="py-5 text-center text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          <p class="mb-0">No requests yet.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj %}
+    <div class="card-footer bg-white border-top">
+      <nav>
+        <ul class="pagination pagination-sm justify-content-center mb-0 themed-pagination">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page=1{% if status_f %}&status={{ status_f }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">First</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_f %}&status={{ status_f }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Previous</a>
+          </li>
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link page-indicator">
+              Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+          </li>
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_f %}&status={{ status_f }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Next</a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if status_f %}&status={{ status_f }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Last</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
 </div>
+
+<!-- DETAILS MODAL -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-0 bg-light">
+        <h5 class="modal-title fw-semibold">
+          <i class="bi bi-info-circle text-primary me-2"></i>Request Details
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- User Info -->
+        <div class="mb-4">
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3">User Information</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="small text-muted mb-1">Username</label>
+              <div class="fw-semibold" id="detail_user"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="small text-muted mb-1">Email</label>
+              <div class="fw-semibold" id="detail_email"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paper Info -->
+        <div class="mb-4">
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3">Paper Information</h6>
+          <div class="mb-3">
+            <label class="small text-muted mb-1">Title</label>
+            <div class="fw-semibold" id="detail_paper"></div>
+          </div>
+          <div>
+            <label class="small text-muted mb-1">Authors</label>
+            <div class="text-muted" id="detail_authors"></div>
+          </div>
+        </div>
+
+        <!-- Request Details -->
+        <div class="mb-4">
+          <h6 class="text-muted text-uppercase small fw-semibold mb-3">Request Details</h6>
+          <div class="mb-3">
+            <label class="small text-muted mb-1">Reason</label>
+            <div class="p-3 bg-light rounded" id="detail_reason"></div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="small text-muted mb-1">Status</label>
+              <div id="detail_status_badge"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="small text-muted mb-1">Requested On</label>
+              <div class="fw-semibold" id="detail_requested"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="small text-muted mb-1">Approved On</label>
+              <div class="fw-semibold" id="detail_approved"></div>
+            </div>
+          </div>
+          <div class="mt-3" id="detail_expires_container">
+            <label class="small text-muted mb-1">Expires On</label>
+            <div class="fw-semibold" id="detail_expires"></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 justify-content-end" id="detail_actions">
+          <!-- Buttons will be inserted here by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="approveForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-semibold">
+          <i class="bi bi-check-circle text-success me-2"></i>Approve Access
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="alert alert-success border-0">
+            <small>
+              Approving <strong id="approve_user"></strong> for 
+              <em id="approve_paper" class="text-break"></em>
+            </small>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Duration (in days)</label>
+          <input type="number" name="days" id="approve_days" min="1" max="365" value="7" class="form-control" required>
+          <small class="text-muted">Allowed range: 1–365 days</small>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-success rounded-pill">
+          <i class="bi bi-check-lg me-1"></i>Approve
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="rejectForm" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header border-0 bg-danger bg-opacity-10">
+        <h5 class="modal-title fw-semibold text-danger">
+          <i class="bi bi-x-octagon me-2"></i>Reject Access
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-danger border-0">
+          <small>
+            Reject access for <strong id="reject_user"></strong> to 
+            <em id="reject_paper" class="text-break"></em>?
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer border-0 bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-danger rounded-pill">
+          <i class="bi bi-x-lg me-1"></i>Reject
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+/* --- Avatar & User Info --- */
+.avatar-circle { 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 14px; 
+  flex-shrink: 0; 
+}
+
+.user-info {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.user-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
+
+.user-email {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* --- Table Layout --- */
+.table > :not(caption) > * > * { padding: 1rem; vertical-align: middle; }
+.req-table { table-layout: fixed; width: 100%; }
+.req-table td { overflow: hidden; max-width: 1px; }
+
+.text-ellipsis { 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  display: block; 
+}
+
+/* Paper cell container */
+.paper-cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.paper-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Paper authors - single line ellipsis */
+.authors-ellipsis {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* Reason column - 2 line clamp */
+.clamp-2 { 
+  display: -webkit-box; 
+  -webkit-line-clamp: 2; 
+  -webkit-box-orient: vertical; 
+  overflow: hidden; 
+  white-space: normal; 
+}
+
+.row-divider:not(:last-child) { 
+  border-bottom: 1px solid rgba(0,0,0,.05); 
+}
+
+td.text-nowrap, th.text-nowrap { 
+  white-space: nowrap; 
+}
+
+/* --- Pagination Styling --- */
+.themed-pagination .page-link { 
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  padding: .375rem .75rem;
+  color: #2563eb;
+}
+
+.themed-pagination .page-link:hover {
+  background-color: #f8f9fa;
+  border-color: #2563eb;
+}
+
+.themed-pagination .page-item.disabled .page-indicator {
+  background-color: transparent;
+  color: #6c757d;
+  border: none;
+  font-weight: 500;
+  padding: .375rem .75rem;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1400px) {
+  .req-table colgroup col:nth-child(1) { width: 20% !important; }
+  .req-table colgroup col:nth-child(2) { width: 23% !important; }
+  .req-table colgroup col:nth-child(3) { width: 22% !important; }
+}
+
+@media (max-width: 1200px) {
+  .req-table { table-layout: auto; }
+  .clamp-2 { -webkit-line-clamp: 1; }
+}
+</style>
+
+<script>
+// Bootstrap modal population for Details
+const detailsModal = document.getElementById('detailsModal');
+detailsModal.addEventListener('show.bs.modal', event => {
+  const btn = event.relatedTarget;
+  const id = btn.getAttribute('data-id');
+  const user = btn.getAttribute('data-user');
+  const email = btn.getAttribute('data-email');
+  const paper = btn.getAttribute('data-paper');
+  const authors = btn.getAttribute('data-authors');
+  const reason = btn.getAttribute('data-reason');
+  const status = btn.getAttribute('data-status');
+  const requested = btn.getAttribute('data-requested');
+  const approved = btn.getAttribute('data-approved');
+  const expires = btn.getAttribute('data-expires');
+  const isExpired = btn.getAttribute('data-isexpired') === 'true';
+
+  // Populate user info
+  document.getElementById('detail_user').textContent = user;
+  document.getElementById('detail_email').textContent = email;
+
+  // Populate paper info
+  document.getElementById('detail_paper').textContent = paper;
+  document.getElementById('detail_authors').textContent = authors || 'N/A';
+
+  // Populate request details
+  document.getElementById('detail_reason').textContent = reason;
+  document.getElementById('detail_requested').textContent = requested;
+  document.getElementById('detail_approved').textContent = approved;
+
+  // Show/hide expires field
+  const expiresContainer = document.getElementById('detail_expires_container');
+  if (status === 'approved') {
+    expiresContainer.style.display = 'block';
+    document.getElementById('detail_expires').textContent = expires;
+  } else {
+    expiresContainer.style.display = 'none';
+  }
+
+  // Status badge
+  const statusBadge = document.getElementById('detail_status_badge');
+  if (status === 'pending') {
+    statusBadge.innerHTML = '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning"><i class="bi bi-hourglass me-1"></i>Pending</span>';
+  } else if (status === 'approved') {
+    if (isExpired) {
+      statusBadge.innerHTML = '<span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary"><i class="bi bi-calendar-x me-1"></i>Expired</span>';
+    } else {
+      statusBadge.innerHTML = '<span class="badge rounded-pill bg-success-subtle text-success border border-success"><i class="bi bi-check-circle me-1"></i>Approved</span>';
+    }
+  } else {
+    statusBadge.innerHTML = '<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>';
+  }
+
+  // Action buttons
+  const actionsDiv = document.getElementById('detail_actions');
+  if (status === 'pending') {
+    actionsDiv.innerHTML = `
+      <button 
+        class="btn btn-success rounded-pill"
+        data-bs-dismiss="modal"
+        data-bs-toggle="modal" 
+        data-bs-target="#approveModal"
+        data-id="${id}"
+        data-user="${user}"
+        data-paper="${paper}"
+        data-defaultdays="7">
+        <i class="bi bi-check-lg me-1"></i>Approve
+      </button>
+      <button 
+        class="btn btn-danger rounded-pill"
+        data-bs-dismiss="modal"
+        data-bs-toggle="modal" 
+        data-bs-target="#rejectModal"
+        data-id="${id}"
+        data-user="${user}"
+        data-paper="${paper}">
+        <i class="bi bi-x-lg me-1"></i>Reject
+      </button>
+    `;
+  } else {
+    actionsDiv.innerHTML = '';
+  }
+});
+
+// Bootstrap modal population for Approve
+const approveModal = document.getElementById('approveModal');
+approveModal.addEventListener('show.bs.modal', event => {
+  const btn = event.relatedTarget;
+  const id = btn.getAttribute('data-id');
+  const user = btn.getAttribute('data-user');
+  const paper = btn.getAttribute('data-paper');
+  const defaultDays = btn.getAttribute('data-defaultdays') || '7';
+
+  document.getElementById('approve_user').textContent = user;
+  document.getElementById('approve_paper').textContent = paper;
+  const daysInput = document.getElementById('approve_days');
+  daysInput.value = defaultDays;
+
+  const form = document.getElementById('approveForm');
+  form.action = `{% url 'approve_access_request' 0 %}`.replace('/0/', `/${id}/`);
+});
+
+// Bootstrap modal population for Reject
+const rejectModal = document.getElementById('rejectModal');
+rejectModal.addEventListener('show.bs.modal', event => {
+  const btn = event.relatedTarget;
+  const id = btn.getAttribute('data-id');
+  const user = btn.getAttribute('data-user');
+  const paper = btn.getAttribute('data-paper');
+
+  document.getElementById('reject_user').textContent = user;
+  document.getElementById('reject_paper').textContent = paper;
+
+  const form = document.getElementById('rejectForm');
+  form.action = `{% url 'reject_access_request' 0 %}`.replace('/0/', `/${id}/`);
+});
+</script>
 {% endblock %}

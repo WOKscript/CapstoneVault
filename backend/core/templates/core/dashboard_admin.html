@@ -1,123 +1,176 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<h3 class="mb-4">Welcome, Admin</h3>
-
-<div class="row g-3 mb-4">
-  <!-- Total Papers -->
-  <div class="col-md-3">
-    <a href="{% url 'capstones_main' %}" class="text-decoration-none">
-      <div class="card text-white bg-primary shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title">Total Papers</h5>
-          <h3 class="card-text">{{ total_papers }}</h3>
-        </div>
-      </div>
-    </a>
+<div class="admin-dashboard">
+  <!-- Page Header -->
+  <div class="mb-4">
+    <h3 class="mb-1 fw-bold text-primary">Admin Dashboard</h3>
+    <p class="text-muted small mb-0">Overview of system statistics and activity</p>
   </div>
 
-  <!-- Verified Users -->
-  <div class="col-md-3">
-    <div class="card text-white bg-success shadow-sm h-100">
-      <div class="card-body">
-        <h5 class="card-title">Verified Users</h5>
-        <h3 class="card-text">{{ verified_users }}</h3>
-      </div>
+  <!-- Statistics Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Total Papers -->
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'capstones_main' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
+          <div class="card-body text-white">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="text-white mb-1 small text-uppercase fw-semibold">Total Papers</h6>
+                <h3 class="mb-0 fw-bold text-white">{{ total_papers }}</h3>
+                <p class="mb-0 small text-white">Published capstones</p>
+              </div>
+              <div class="fs-1 text-white" style="opacity: 0.15;">
+                <i class="bi bi-journal-text"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Verified Users -->
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'user_management' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
+          <div class="card-body text-white">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="text-white mb-1 small text-uppercase fw-semibold">Verified Users</h6>
+                <h3 class="mb-0 fw-bold text-white">{{ verified_users }}</h3>
+                <p class="mb-0 small text-white">Active accounts</p>
+              </div>
+              <div class="fs-1 text-white" style="opacity: 0.15;">
+                <i class="bi bi-people"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Access Requests -->
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'access_request_list' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
+          <div class="card-body text-white">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="text-white mb-1 small text-uppercase fw-semibold">Access Requests</h6>
+                <h3 class="mb-0 fw-bold text-white">{{ pending_requests }}</h3>
+                <p class="mb-0 small text-white">Pending approval</p>
+              </div>
+              <div class="fs-1 text-white" style="opacity: 0.15;">
+                <i class="bi bi-key"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Audit Logs -->
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'audit_logs' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
+          <div class="card-body text-white">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <h6 class="text-white mb-1 small text-uppercase fw-semibold">Audit Logs</h6>
+                <h3 class="mb-0 fw-bold text-white">{{ session_logs }}</h3>
+                <p class="mb-0 small text-white">System activities</p>
+              </div>
+              <div class="fs-1 text-white" style="opacity: 0.15;">
+                <i class="bi bi-clock-history"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
     </div>
   </div>
 
-  <!-- Access Requests -->
-  <div class="col-md-3">
-    <a href="{% url 'access_request_list' %}" class="text-decoration-none">
-      <div class="card text-white bg-warning shadow-sm h-100">
+  <!-- Analytics Section -->
+  <div class="row g-3">
+    <!-- Yearly Output Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title">Access Requests</h5>
-          <h3 class="card-text">{{ pending_requests }}</h3>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold">Yearly Output</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div id="miniYearly" style="min-height: 200px;"></div>
         </div>
       </div>
-    </a>
-  </div>
+    </div>
 
-  <!-- Future: Session Logs -->
-  <div class="col-md-3">
-    <a href="#" class="text-decoration-none">
-      <div class="card text-white bg-danger shadow-sm h-100">
+    <!-- Category Trend Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title">Session Logs</h5>
-          <h3 class="card-text">{{ session_logs }}</h3>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold">Category Trend</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div id="miniCategory" style="min-height: 200px;"></div>
         </div>
       </div>
-    </a>
+    </div>
+
+    <!-- Most Accessed Papers -->
+    <div class="col-lg-4 col-md-12">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold">Most Accessed Papers</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div class="text-center mb-2">
+            <small id="miniAyLabel" class="text-muted fw-semibold"></small>
+          </div>
+          <div id="miniMostAccessed" style="min-height: 200px;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- Mini Trends -->
 <style>
-  .mini-chart { min-height: 160px; }
-  .card-link { color: inherit; text-decoration: none; }
-  .card-link .card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1); }
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.admin-dashboard .card {
+  border-radius: 0.5rem;
+}
 </style>
-
-<div class="row g-3">
-  <!-- Mini: Papers per Year (donut) -->
-  <div class="col-lg-4 col-md-6">
-    <a href="{% url 'trends_dashboard' %}" class="card-link">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0">Yearly Output</h6>
-            <small class="text-muted">view details →</small>
-          </div>
-          <div id="miniYearly" class="mini-chart"></div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <!-- Mini: Papers by Category (line) -->
-  <div class="col-lg-4 col-md-6">
-    <a href="{% url 'trends_dashboard' %}" class="card-link">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0">Category Trend</h6>
-            <small class="text-muted">view details →</small>
-          </div>
-          <div id="miniCategory" class="mini-chart"></div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <!-- Mini: Most Accessed Papers (by School Year) -->
-  <div class="col-lg-4 col-md-12">
-    <a href="{% url 'trends_dashboard' %}" class="card-link">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0">Most Accessed Papers</h6>
-            <small id="miniAyLabel" class="text-muted"></small>
-          </div>
-          <div id="miniMostAccessed" class="mini-chart"></div>
-        </div>
-      </div>
-    </a>
-  </div>
-</div>
 
 <!-- ApexCharts CDN -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 <script>
 (function () {
-  // ------------ helpers ------------
+  // Helper functions
   async function fetchJSON(url) {
     const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
 
-  // Academic year utility (AY starts in August by default)
+  // Academic year utility
   const AY_START_MONTH = 8;
   function ayFor(date) {
     const y = date.getFullYear(), m = date.getMonth() + 1;
@@ -133,73 +186,90 @@
   }
 
   // Elements
-  const elMiniYearly     = document.querySelector("#miniYearly");
-  const elMiniCategory   = document.querySelector("#miniCategory");
-  const elMiniMostAcc    = document.querySelector("#miniMostAccessed");
-  const elMiniAyLabel    = document.querySelector("#miniAyLabel");
+  const elMiniYearly = document.querySelector("#miniYearly");
+  const elMiniCategory = document.querySelector("#miniCategory");
+  const elMiniMostAcc = document.querySelector("#miniMostAccessed");
+  const elMiniAyLabel = document.querySelector("#miniAyLabel");
 
-  // ------------ mini: Yearly + Category ------------
+  // Chart theme colors
+  const chartColors = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754'];
+
+  // Yearly + Category Charts
   fetchJSON("{% url 'trends_api' %}")
     .then(data => {
       // Yearly Output (donut)
       new ApexCharts(elMiniYearly, {
-        chart: { type: 'donut', height: 180, sparkline: { enabled: true } },
+        chart: { type: 'donut', height: 220 },
         series: data.yearly.counts,
         labels: data.yearly.labels,
-        legend: { show: false },
-        dataLabels: { enabled: false },
-        tooltip: { y: { formatter: v => v } }
+        colors: chartColors,
+        legend: { position: 'bottom', fontSize: '12px' },
+        dataLabels: { enabled: true, style: { fontSize: '12px' } },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '65%',
+              labels: {
+                show: true,
+                total: {
+                  show: true,
+                  label: 'Total',
+                  fontSize: '14px',
+                  fontWeight: 600
+                }
+              }
+            }
+          }
+        }
       }).render();
 
-      // Category Trend (compact line)
+      // Category Trend (line)
       new ApexCharts(elMiniCategory, {
-        chart: { type: 'line', height: 180, sparkline: { enabled: true } },
+        chart: { type: 'line', height: 220, toolbar: { show: false } },
         series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
         xaxis: { categories: data.stackedByCategory.labels },
+        colors: chartColors,
         stroke: { curve: 'smooth', width: 2 },
-        markers: { size: 0 },
-        dataLabels: { enabled: false },
-        tooltip: { y: { formatter: v => v } }
+        markers: { size: 4 },
+        legend: { position: 'bottom', fontSize: '12px' },
+        grid: { borderColor: '#f1f1f1' }
       }).render();
     })
     .catch(err => console.error('trends_api error:', err));
 
-  // ------------ mini: Most Accessed Papers (by AY) ------------
+  // Most Accessed Papers
   async function renderMostAccessedForAY(ay) {
     const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
-    const papers = d.topPapers || []; // correct key
+    const papers = d.topPapers || [];
 
-    if (!papers.length) return false; // nothing for this AY
+    if (!papers.length) return false;
 
-    // Truncate long titles for the mini chart
-    const labels = papers.map(p => p.title.length > 22 ? p.title.slice(0, 22) + '…' : p.title);
-    const views  = papers.map(p => p.views);
+    const labels = papers.map(p => p.title.length > 25 ? p.title.slice(0, 25) + '...' : p.title);
+    const views = papers.map(p => p.views);
 
-    // clear previous chart (if any)
     elMiniMostAcc.innerHTML = '';
 
     new ApexCharts(elMiniMostAcc, {
-      chart: { type: 'bar', height: 180, sparkline: { enabled: true } },
+      chart: { type: 'bar', height: 220, toolbar: { show: false } },
       series: [{ name: 'Views', data: views }],
       xaxis: { categories: labels },
-      plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
+      colors: ['#0d6efd'],
+      plotOptions: { bar: { horizontal: true, borderRadius: 4 } },
       dataLabels: { enabled: false },
+      grid: { borderColor: '#f1f1f1' },
       tooltip: {
-        y: { formatter: v => v },
+        y: { formatter: v => v + ' views' },
         x: {
-          formatter: (val, { dataPointIndex }) =>
-            papers[dataPointIndex]?.title || val
+          formatter: (val, { dataPointIndex }) => papers[dataPointIndex]?.title || val
         }
       }
     }).render();
 
-    // show which AY is being displayed
-    if (elMiniAyLabel) elMiniAyLabel.textContent = ay;
+    if (elMiniAyLabel) elMiniAyLabel.textContent = `Academic Year ${ay}`;
     return true;
   }
 
   (async () => {
-    // Try current AY first; if empty, fall back to the most recent AY with data
     let rendered = false;
     for (const ay of ayList) {
       try {
@@ -211,9 +281,8 @@
     }
 
     if (!rendered) {
-      // Nothing in any AY
       if (elMiniAyLabel) elMiniAyLabel.textContent = currentAY;
-      elMiniMostAcc.innerHTML = '<div class="text-muted small">No views recorded yet.</div>';
+      elMiniMostAcc.innerHTML = '<div class="text-center text-muted small py-4">No views recorded yet</div>';
     }
   })();
 })();
