@@ -28,7 +28,8 @@ SECRET_KEY = 'django-insecure-7-k#43%fb6f*v5ay1!tpub+i5#)#h+g$zy*_iz*d!vvf5o4i$$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "your-prod-domain.com", "capstone-vault.vercel.app", "vercel.app"]
+CSRF_TRUSTED_ORIGINS = ["https://your-prod-domain.com", "http://localhost", "http://127.0.0.1"]
 
 # Application definition
 INSTALLED_APPS = [
@@ -240,5 +241,3 @@ print(
 )
 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "your-prod-domain.com"]
-CSRF_TRUSTED_ORIGINS = ["https://your-prod-domain.com", "http://localhost", "http://127.0.0.1"]
