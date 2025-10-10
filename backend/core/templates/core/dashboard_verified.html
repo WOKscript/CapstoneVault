@@ -1,62 +1,66 @@
 {% extends 'core/base.html' %}
-{% block content %}
-<div class="container-fluid px-4 py-4">
 
-  <!-- Trends Section -->
-  <div class="card shadow-lg border-0 mb-4">
-    <div class="card-header bg-primary text-white fw-bold">
-      <i class="bi bi-bar-chart-line me-2"></i> Dashboard Insights
+{% block content %}
+<div class="admin-dashboard">
+  <!-- Page Header -->
+  <div class="mb-4">
+    <h3 class="mb-1 fw-bold text-primary">Verified Dashboard</h3>
+    <p class="text-muted small mb-0">Quick overview of trends and actions</p>
+  </div>
+
+  <!-- Analytics Section (no stat cards) -->
+  <div class="row g-3">
+    <!-- Yearly Output -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold">Yearly Output</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div id="miniYearly" style="min-height: 200px;"></div>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <a href="{% url 'trends_dashboard' %}" class="text-decoration-none text-dark">
-            <div class="card shadow-sm h-100 border-0">
-              <div class="card-body">
-                <h6 class="card-title d-flex justify-content-between align-items-center fw-bold">
-                  Yearly Output
-                  <span class="small text-muted">View →</span>
-                </h6>
-                <div id="miniYearly" style="min-height: 180px;"></div>
-              </div>
-            </div>
-          </a>
+
+    <!-- Category Trend -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold">Category Trend</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div id="miniCategory" style="min-height: 200px;"></div>
         </div>
-        <div class="col-md-4">
-          <a href="{% url 'trends_dashboard' %}" class="text-decoration-none text-dark">
-            <div class="card shadow-sm h-100 border-0">
-              <div class="card-body">
-                <h6 class="card-title d-flex justify-content-between align-items-center fw-bold">
-                  Category Trend
-                  <span class="small text-muted">View →</span>
-                </h6>
-                <div id="miniCategory" style="min-height: 180px;"></div>
-              </div>
-            </div>
-          </a>
-        </div>
-        <div class="col-md-4">
-          <a href="{% url 'trends_dashboard' %}" class="text-decoration-none text-dark">
-            <div class="card shadow-sm h-100 border-0">
-              <div class="card-body">
-                <h6 class="card-title d-flex justify-content-between align-items-center fw-bold">
-                  Most Accessed Papers
-                  <small id="miniAyLabel" class="text-muted"></small>
-                </h6>
-                <div id="miniMostAccessed" style="min-height: 180px;"></div>
-              </div>
-            </div>
-          </a>
+      </div>
+    </div>
+
+    <!-- Most Accessed Papers -->
+    <div class="col-lg-4 col-md-12">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0 fw-semibold">Most Accessed Papers</h6>
+            <a href="{% url 'trends_dashboard' %}" class="text-decoration-none small text-primary">
+              View Details <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+          <div class="text-center mb-2">
+            <small id="miniAyLabel" class="text-muted fw-semibold"></small>
+          </div>
+          <div id="miniMostAccessed" style="min-height: 200px;"></div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Quick Actions -->
-  <div class="card shadow-lg border-0 mb-4">
-    <div class="card-header bg-light fw-bold">
-      <i class="bi bi-lightning-charge me-2"></i> Quick Actions
-    </div>
+  <div class="card border-0 shadow-sm mt-4">
     <div class="card-body">
       {% if can_upload %}
         <div class="alert alert-success shadow-sm mb-3">
@@ -75,90 +79,87 @@
       </a>
     </div>
   </div>
-
-
 </div>
-{% endblock %}
 
-{% block scripts %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<style>
+  .admin-dashboard .card { border-radius: .5rem; }
+</style>
+
+<!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 (function () {
-  async function fetchJSON(url) {
-    const res = await fetch(url, { credentials: 'same-origin' });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+  async function fetchJSON(url){
+    const r = await fetch(url,{credentials:'same-origin'});
+    if(!r.ok) throw new Error(await r.text());
+    return r.json();
   }
-  const AY_START_MONTH = 8;
-  function ayFor(d) {
-    const y = d.getFullYear(), m = d.getMonth() + 1;
-    return (m >= AY_START_MONTH) ? `${y}-${y+1}` : `${y-1}-${y}`;
-  }
+
+  const AY_START_MONTH = 8; // August
+  function ayFor(d){ const y=d.getFullYear(), m=d.getMonth()+1; return (m>=AY_START_MONTH)?`${y}-${y+1}`:`${y-1}-${y}`; }
+
+  const currentAY = ayFor(new Date());
+  const ayList = Array.from({length:5},(_,i)=>{const base=parseInt(currentAY.slice(0,4))-i; return `${base}-${base+1}`;});
 
   const elMiniYearly   = document.querySelector('#miniYearly');
   const elMiniCategory = document.querySelector('#miniCategory');
   const elMiniMostAcc  = document.querySelector('#miniMostAccessed');
-  const elAyLabel      = document.querySelector('#miniAyLabel');
+  const elMiniAyLabel  = document.querySelector('#miniAyLabel');
 
+  const chartColors = ['#0d6efd','#6610f2','#6f42c1','#d63384','#dc3545','#fd7e14','#ffc107','#198754'];
+
+  // Yearly Output & Category Trend
   fetchJSON("{% url 'trends_api' %}")
-    .then(data => {
-      new ApexCharts(elMiniYearly, {
-        chart: { type: 'donut', height: 180, sparkline: { enabled: true } },
-        series: data.yearly.counts,
-        labels: data.yearly.labels,
-        legend: { show: false },
-        dataLabels: { enabled: false }
+    .then(data=>{
+      new ApexCharts(elMiniYearly,{
+        chart:{type:'donut',height:220},
+        series:data.yearly.counts, labels:data.yearly.labels, colors:chartColors,
+        legend:{position:'bottom',fontSize:'12px'},
+        dataLabels:{enabled:true,style:{fontSize:'12px'}},
+        plotOptions:{pie:{donut:{size:'65%',labels:{show:true,total:{show:true,label:'Total',fontSize:'14px',fontWeight:600}}}}}
       }).render();
 
-      new ApexCharts(elMiniCategory, {
-        chart: { type: 'line', height: 180, sparkline: { enabled: true } },
-        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
-        xaxis: { categories: data.stackedByCategory.labels },
-        stroke: { curve: 'smooth', width: 2 },
-        markers: { size: 0 },
-        dataLabels: { enabled: false }
+      new ApexCharts(elMiniCategory,{
+        chart:{type:'line',height:220,toolbar:{show:false}},
+        series:data.stackedByCategory.series.map(s=>({name:s.name,data:s.data})),
+        xaxis:{categories:data.stackedByCategory.labels}, colors:chartColors,
+        stroke:{curve:'smooth',width:2}, markers:{size:4},
+        legend:{position:'bottom',fontSize:'12px'}, grid:{borderColor:'#f1f1f1'}
       }).render();
-    });
+    })
+    .catch(e=>console.error('trends_api error:',e));
 
-  const currentAY = ayFor(new Date());
-  const ayCandidates = Array.from({length: 5}, (_, i) => {
-    const base = parseInt(currentAY.slice(0,4)) - i;
-    return `${base}-${base+1}`;
-  });
+  // Most Accessed (first AY with data)
+  async function renderMost(ay){
+    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay="+encodeURIComponent(ay));
+    const papers = d.topPapers||[];
+    if(!papers.length) return false;
 
-  async function renderMostAccessed(ay) {
-    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
-    const papers = d.topPapers || [];
-    if (!papers.length) return false;
+    const labels = papers.map(p=>p.title.length>25?p.title.slice(0,25)+'…':p.title);
+    const views  = papers.map(p=>p.views);
+    elMiniMostAcc.innerHTML='';
 
-    const labels = papers.map(p => p.title.length > 22 ? p.title.slice(0,22) + '…' : p.title);
-    const views  = papers.map(p => p.views);
-    elMiniMostAcc.innerHTML = '';
-
-    new ApexCharts(elMiniMostAcc, {
-      chart: { type: 'bar', height: 180, sparkline: { enabled: true } },
-      series: [{ name: 'Views', data: views }],
-      xaxis: { categories: labels },
-      plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
-      dataLabels: { enabled: false }
+    new ApexCharts(elMiniMostAcc,{
+      chart:{type:'bar',height:220,toolbar:{show:false}},
+      series:[{name:'Views',data:views}],
+      xaxis:{categories:labels}, colors:['#0d6efd'],
+      plotOptions:{bar:{horizontal:true,borderRadius:4}},
+      dataLabels:{enabled:false}, grid:{borderColor:'#f1f1f1'},
+      tooltip:{y:{formatter:v=>v+' views'},x:{formatter:(val,{dataPointIndex})=>papers[dataPointIndex]?.title||val}}
     }).render();
 
-    if (elAyLabel) elAyLabel.textContent = ay;
+    if(elMiniAyLabel) elMiniAyLabel.textContent = `Academic Year ${ay}`;
     return true;
   }
 
-  (async () => {
-    let ok = false;
-    for (const ay of ayCandidates) {
-      try {
-        ok = await renderMostAccessed(ay);
-        if (ok) break;
-      } catch {}
+  (async()=>{
+    let ok=false;
+    for(const ay of ayList){
+      try{ ok = await renderMost(ay); if(ok) break; }catch(e){ console.error('most_accessed_api error',ay,e); }
     }
-    if (!ok) {
-      elAyLabel.textContent = currentAY;
-      elMiniMostAcc.innerHTML = '<div class="text-muted small">No views recorded yet.</div>';
+    if(!ok){
+      if(elMiniAyLabel) elMiniAyLabel.textContent = currentAY;
+      elMiniMostAcc.innerHTML = '<div class="text-center text-muted small py-4">No views recorded yet</div>';
     }
   })();
 })();

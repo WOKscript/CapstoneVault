@@ -12,7 +12,7 @@
     .chart-wrap { width: 100%; }
     #chartYearly     { min-height: 320px; }  /* Pie */
     #chartStacked    { min-height: 360px; }  /* Line by category */
-    #chartTopPapers  { min-height: 380px; }  /* Horizontal bar */
+    #chartTopPapers  { min-height: 380px; }  /* Horizontal bar (baseline; JS may override) */
   </style>
 
   <!-- Papers per Year (PIE) -->
@@ -60,22 +60,34 @@
     return res.json();
   }
 
-  // ---- AY selector (last 5 AYs; starts in August) ----
-  const AY_START = 8;
+  // ---- AY selector (auto-create ascending from current AY; AY starts in August) ----
+  const AY_START = 8;                 // August
+  const AY_YEARS_AHEAD = 5;           // how many AYs forward to list (configurable)
+
   function ayFor(d) {
     const y = d.getFullYear(), m = d.getMonth() + 1;
     return (m >= AY_START) ? `${y}-${y+1}` : `${y-1}-${y}`;
   }
+  function ayStartYear(ayStr) {       // "2025-2026" -> 2025
+    return parseInt(ayStr.slice(0, 4), 10);
+  }
+
   const aySelect = document.getElementById('aySelect');
   const nowAY = ayFor(new Date());
+  const start = ayStartYear(nowAY);
+
+  // Build ascending list: current AY then forward
   const ayList = [];
-  for (let i = 0; i < 5; i++) {
-    const base = parseInt(nowAY.slice(0,4)) - i;
-    ayList.push(`${base}-${base+1}`);
+  for (let i = 0; i < AY_YEARS_AHEAD; i++) {
+    const y1 = start + i;
+    ayList.push(`${y1}-${y1 + 1}`);
   }
+
+  // Populate dropdown (ascending), default select = current AY
   ayList.forEach(ay => {
     const opt = document.createElement('option');
-    opt.value = ay; opt.textContent = ay;
+    opt.value = ay;
+    opt.textContent = ay;
     if (ay === nowAY) opt.selected = true;
     aySelect.appendChild(opt);
   });
@@ -117,13 +129,37 @@
     })
     .catch(err => console.error('trends_api error:', err));
 
-  // ---- Most Accessed (from most_accessed_api) ----
+  // ===========================
+  // Most Accessed (by AY) logic
+  // ===========================
+
   const mountTop = document.getElementById('chartTopPapers');
-  let reqToken = 0; // prevent race conditions
+  let reqToken = 0; // prevent race conditions between quick AY switches
 
   function setLoading(msg) {
     if (chartTopPapers) { chartTopPapers.destroy(); chartTopPapers = null; }
     mountTop.innerHTML = `<div class="text-muted small ms-1 mt-2">${msg}</div>`;
+  }
+
+  // Sanitize API rows (null-safe title, numeric views)
+  function sanitizeTopPapers(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((r) => {
+        const rawTitle = (r?.title ?? '').toString().trim();
+        const title = rawTitle.length ? rawTitle : '(Untitled)';
+        const viewsNum = Number(r?.views);
+        const views = Number.isFinite(viewsNum) && viewsNum >= 0 ? viewsNum : 0;
+        return { title, views };
+      })
+      .filter((r) => r.title);
+  }
+
+  // Dynamic chart height so bars don’t feel cramped
+  function computeBarHeight(n) {
+    // ~36px per bar + some headroom; clamp 260–520
+    const base = 36 * Math.max(n, 3) + 120;
+    return Math.max(260, Math.min(base, 520));
   }
 
   async function loadAY(ay) {
@@ -131,9 +167,9 @@
     try {
       setLoading(`Loading ${ay}…`);
       const d = await fetchJSON(`{% url 'most_accessed_api' %}?ay=${encodeURIComponent(ay)}`);
-      if (myToken !== reqToken) return; // newer request already started
+      if (myToken !== reqToken) return; // a newer request started
 
-      const papers = d?.topPapers ?? [];
+      const papers = sanitizeTopPapers(d?.topPapers ?? []);
       mountTop.innerHTML = '';
 
       if (!papers.length) {
@@ -141,18 +177,27 @@
         return;
       }
 
-      const labels = papers.map(p => p.title.length > 40 ? p.title.slice(0, 40) + '…' : p.title);
+      const labels = papers.map(p => {
+        const t = p.title;
+        return t.length > 40 ? t.slice(0, 40) + '…' : t;
+      });
       const values = papers.map(p => p.views);
+      const height = computeBarHeight(papers.length);
 
       chartTopPapers = new ApexCharts(mountTop, {
-        chart: { type: 'bar', height: 380, toolbar: { show: true } },
+        chart: { type: 'bar', height, toolbar: { show: true } },
         series: [{ name: 'Views', data: values }],
         xaxis: { categories: labels, labels: { trim: true } },
         plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
         dataLabels: { enabled: false },
         tooltip: {
           y: { formatter: v => v },
-          x: { formatter: (val, ctx) => papers[ctx.dataPointIndex]?.title || val }
+          x: {
+            formatter: (val, ctx) => {
+              const item = papers[ctx?.dataPointIndex ?? -1];
+              return item?.title || val || '(Untitled)';
+            }
+          }
         },
         colors: palette
       });
@@ -165,7 +210,7 @@
   }
 
   aySelect.addEventListener('change', () => loadAY(aySelect.value));
-  loadAY(aySelect.value);
+  loadAY(nowAY); // ensure default selection loads current AY
 
   // Nudge charts after sidebar toggle (layout width change)
   document.getElementById('sidebarToggle')?.addEventListener('click', () => {

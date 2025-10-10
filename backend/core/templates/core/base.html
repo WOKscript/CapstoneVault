@@ -129,21 +129,16 @@
             <i class="bi bi-speedometer2 nav-icon"></i>
             <span class="nav-text">Dashboard</span>
           </a>
-          
-          <!-- User Management Link -->
           <a href="{% url 'user_management' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
             <i class="bi bi-people nav-icon"></i>
             <span class="nav-text">User Management</span>
           </a>
-          
-          <!-- Audit Logs Link -->
           <a href="{% url 'audit_logs' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'audit_logs' or request.resolver_match.url_name == 'audit_log_detail' %}active{% endif %}">
             <i class="bi bi-clock-history nav-icon"></i>
             <span class="nav-text">Audit Logs</span>
           </a>
-          
           <a href="{% url 'access_request_list' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'access_request_list' %}active{% endif %}">
             <i class="bi bi-key nav-icon"></i>
@@ -240,15 +235,6 @@
             <span class="nav-text">Trends</span>
           </a>
         </div>
-        
-        <div class="nav-section mt-3">
-          <div class="px-3">
-            <div class="alert alert-info alert-sm border-0" role="alert">
-              <i class="bi bi-info-circle me-2"></i>
-              <small>Request verification to access full features</small>
-            </div>
-          </div>
-        </div>
       {% endif %}
     </nav>
 
@@ -274,17 +260,11 @@
 
   <!-- Page Content -->
   <div id="page-content-wrapper" class="flex-grow-1">
-    <!-- Breadcrumb Navigation -->
-    {% if user.is_authenticated %}
-    <nav aria-label="breadcrumb" class="bg-light border-bottom px-4 py-2">
-      <ol class="breadcrumb mb-0">
-        {% block breadcrumb %}
-        <li class="breadcrumb-item"><a href="#" class="text-decoration-none">Home</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-        {% endblock %}
-      </ol>
-    </nav>
-    {% endif %}
+    {# Breadcrumbs removed globally. Keep block for compat but render nothing. #}
+    {% block breadcrumb %}{% endblock %}
+
+    {# Optional page header (use in child templates if needed) #}
+    {% block page_header %}{% endblock %}
 
     <!-- Main Content Area -->
     <main class="main-content p-4">

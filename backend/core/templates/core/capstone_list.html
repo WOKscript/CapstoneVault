@@ -4,101 +4,81 @@
 {% block content %}
 
   <style>
-    :root { --ctl-h: 36px; }
+    :root { --ctl-h: 38px; }
+
+    /* ------- Toolbar (search + sort + buttons) ------- */
     .toolbar { gap:.5rem; }
     .toolbar .form-control,
     .toolbar .form-select,
-    .toolbar .btn {
+    .toolbar .btn,
+    .toolbar .input-group-text {
       height: var(--ctl-h);
       padding-top:.25rem; padding-bottom:.25rem;
+      border-radius:.5rem;
     }
+    .toolbar .input-group { max-width: 620px; }
+    .toolbar .input-group .form-control { border-left: 0; }
+    .toolbar .input-group-text { border-right: 0; }
+    .toolbar .btn-icon { display:inline-flex; align-items:center; gap:.4rem; }
+
     .w-md-260 { width:100%; }
     .w-md-180 { width:100%; }
     @media (min-width: 768px) {
       .w-md-260 { width:260px; }
       .w-md-180 { width:180px; }
     }
-    .muted { color: rgba(0,0,0,.6); }
-    .chip { background:#f8f9fa; border:1px solid #e9ecef; border-radius:9999px; padding:.2rem .6rem; font-size:.75rem; }
-    .card-clean { 
-      border:0; 
-      box-shadow:0 .125rem .25rem rgba(0,0,0,.075); 
-      transition:transform .15s ease, box-shadow .15s ease; 
-      border-radius: 12px;
-      overflow: hidden;
+
+    /* ------- Paper cards ------- */
+    .card-clean {
+      border:0;
+      box-shadow:0 .125rem .25rem rgba(0,0,0,.075);
+      transition:transform .15s ease, box-shadow .15s ease;
+      border-radius:.75rem;
+      overflow:hidden;
+      background:#fff;
     }
-    .card-clean:hover { 
-      transform:translateY(-2px); 
-      box-shadow:0 .5rem 1rem rgba(0,0,0,.15); 
-    }
-    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .tag { 
-      font-size:.7rem; 
-      background:#e3f2fd; 
-      color:#1565c0; 
-      border: 1px solid #bbdefb;
-      border-radius: 12px;
-      padding: .2rem .5rem;
-    }
-    .tag-wrap { max-height:56px; overflow:auto; }
-    .card-footer { background:transparent; border-top:1px solid #f1f3f4; padding: 1rem; }
+    .card-clean:hover { transform:translateY(-2px); box-shadow:0 .5rem 1rem rgba(0,0,0,.15); }
 
     .paper-card-header {
-      background: #4285f4;
-      color: white;
-      padding: 1rem;
-      position: relative;
+      background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+      color:#fff;
+      padding:1rem 1.25rem;
+      position:relative;
     }
-    .paper-title {
-      font-weight: 600;
-      font-size: 1rem;
-      line-height: 1.3;
-      margin-bottom: .5rem;
+    .paper-title { font-weight:700; font-size:1rem; line-height:1.3; margin-bottom:.5rem; color:#fff; }
+    .paper-meta { font-size:.8rem; opacity:.95; }
+
+    .paper-authors { font-size:.85rem; color:#6c757d; margin-bottom:.75rem; }
+
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+    .tag {
+      font-size:.7rem; background:#e7f1ff; color:#0d6efd;
+      border:1px solid #d5e6ff; border-radius:9999px;
+      padding:.2rem .5rem;
     }
-    .paper-meta {
-      font-size: .8rem;
-      opacity: .9;
+    .tag-wrap { max-height:56px; overflow:auto; }
+
+    .card-footer { background:transparent; border-top:1px solid #f1f3f4; padding:1rem; }
+
+    .actions { gap:.75rem; display:flex; flex-direction:column; }
+    .btn-view-pdf {
+      background:#0d6efd; border:none; color:#fff; font-weight:600;
+      padding:.7rem 1.2rem; border-radius:.5rem; font-size:.9rem;
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+      box-shadow:0 .25rem .75rem rgba(13,110,253,.18);
     }
-    .paper-authors {
-      font-size: .8rem;
-      color: #666;
-      margin-bottom: .75rem;
+    .btn-view-pdf:hover { background:#0b5ed7; color:#fff; transform:translateY(-1px); box-shadow:0 .5rem 1rem rgba(13,110,253,.25); }
+
+    .btn-secondary-actions { display:flex; gap:.5rem; justify-content:space-between; }
+    .btn-secondary-actions .btn { flex:1; font-size:.8rem; padding:.45rem .8rem; border-radius:.5rem; }
+
+    .muted { color: rgba(0,0,0,.6); }
+    .chip {
+      background:#f8f9fa; border:1px solid #e9ecef; border-radius:9999px;
+      padding:.2rem .6rem; font-size:.75rem;
     }
 
-    .actions { 
-      gap: .75rem; 
-      display: flex;
-      flex-direction: column;
-    }
-    .btn-view-pdf {
-      background: #4285f4;
-      border: none;
-      color: white;
-      font-weight: 600;
-      padding: .75rem 1.5rem;
-      border-radius: 8px;
-      font-size: .9rem;
-      transition: all .2s ease;
-      box-shadow: 0 2px 4px rgba(66, 133, 244, .2);
-    }
-    .btn-view-pdf:hover {
-      background: #3367d6;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(66, 133, 244, .3);
-      color: white;
-    }
-    .btn-secondary-actions {
-      display: flex;
-      gap: .5rem;
-      justify-content: space-between;
-    }
-    .btn-secondary-actions .btn {
-      flex: 1;
-      font-size: .8rem;
-      padding: .4rem .8rem;
-      border-radius: 6px;
-    }
-    
     .modal-body p { text-align: justify; }
   </style>
 
@@ -117,25 +97,35 @@
       </ol>
     </nav>
 
-    <form method="get" class="toolbar d-flex flex-wrap justify-content-end">
+    <!-- SEARCH / SORT (layout only changed) -->
+    <form method="get" class="toolbar d-flex flex-wrap justify-content-end align-items-center">
       {% if selected_year %}<input type="hidden" name="year" value="{{ selected_year }}">{% endif %}
       {% if selected_subcategory %}<input type="hidden" name="subcategory" value="{{ selected_subcategory }}">{% endif %}
 
-      <input type="text" name="q" value="{{ search_query }}"
-             class="form-control form-control-sm w-md-260"
-             placeholder="Search papers by title, author, or tag">
+      <div class="input-group me-0 me-md-2 mb-2 mb-md-0">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input
+          type="text"
+          name="q"
+          value="{{ search_query }}"
+          class="form-control"
+          placeholder="Search papers by title, author, or tag">
+      </div>
 
-      <select name="sort" class="form-select form-select-sm w-md-180">
+      <select name="sort" class="form-select w-auto me-2 mb-2 mb-md-0">
         <option value="">Sort</option>
         <option value="year_desc" {% if request.GET.sort == 'year_desc' %}selected{% endif %}>Year (newest)</option>
-        <option value="year_asc" {% if request.GET.sort == 'year_asc' %}selected{% endif %}>Year (oldest)</option>
+        <option value="year_asc"  {% if request.GET.sort == 'year_asc'  %}selected{% endif %}>Year (oldest)</option>
         <option value="title_asc" {% if request.GET.sort == 'title_asc' %}selected{% endif %}>Title (A–Z)</option>
       </select>
 
-      <button type="submit" class="btn btn-primary btn-sm">Search</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm"
+      <button type="submit" class="btn btn-primary btn-icon me-2 mb-2 mb-md-0">
+        <i class="bi bi-sliders"></i><span>Apply</span>
+      </button>
+
+      <button type="button" class="btn btn-outline-secondary btn-icon mb-2 mb-md-0"
               data-bs-toggle="modal" data-bs-target="#filterModal">
-        Filter
+        <i class="bi bi-funnel"></i><span>Filter</span>
       </button>
     </form>
   </div>
@@ -165,7 +155,7 @@
               <div class="paper-authors">
                 <strong>Authors:</strong> {{ paper.authors }}{% if paper.adviser %}<br><strong>Adviser:</strong> {{ paper.adviser }}{% endif %}
               </div>
-              
+
               {% if paper.tags.all %}
                 <div class="tag-wrap d-flex flex-wrap gap-1 mt-auto">
                   {% for tag in paper.tags.all %}
@@ -189,38 +179,24 @@
                               data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
                     </div>
 
-                  {% elif role == 'verified' and request.user == paper.uploaded_by %}
+                  {% elif role == 'verified' %}
+                    {# Verified users: always allowed to view any paper #}
                     <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
                     <div class="btn-secondary-actions">
-                      <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
-                      <button type="button" class="btn btn-outline-danger btn-sm"
-                              data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
-                      <button type="button" class="btn btn-outline-secondary btn-sm"
+                      {% if request.user == paper.uploaded_by %}
+                        <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
+                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                      {% endif %}
+                      <button type="button" class="btn btn-outline-secondary btn-sm w-100"
                               data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
                     </div>
-
-                  {% elif role == 'verified' %}
-                    {% if paper.status == 'approved' %}
-                      <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
-                      <div class="btn-secondary-actions">
-                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
-                                data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
-                      </div>
-                    {% else %}
-                      <div class="text-center py-2">
-                        <span class="badge bg-secondary">Not approved yet</span>
-                      </div>
-                      <div class="btn-secondary-actions">
-                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
-                                data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
-                      </div>
-                    {% endif %}
 
                   {% else %}
                     {% if paper.id in approved_access_ids %}
                       <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
                     {% else %}
-                      <a href="{% url 'request_access' paper.id %}" class="btn btn-view-pdf w-100" style="background: #ff9800; color: white;">Request Access</a>
+                      <a href="{% url 'request_access' paper.id %}" class="btn btn-view-pdf w-100" style="background:#ff9800; color:#fff;">Request Access</a>
                     {% endif %}
                     <div class="btn-secondary-actions">
                       <button type="button" class="btn btn-outline-secondary btn-sm w-100"
@@ -255,7 +231,7 @@
           </div>
         </div>
 
-        <!-- Delete Modal (used by Admin & Instructor and Verified uploader) -->
+        <!-- Delete Modal -->
         <div class="modal fade" id="delModal{{ paper.id }}" tabindex="-1" aria-labelledby="delLabel{{ paper.id }}" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">

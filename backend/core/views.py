@@ -749,7 +749,7 @@ def capstone_list_by_category(request, category):
     if year.isdigit():
         qs = qs.filter(publication_year=int(year))
     if subcat:
-        qs = qs.filter(subcategory__name=subcat)
+        qs = qs.filter(subcategory__name__iexact=subcat)
 
     if q:
         ft = (
@@ -758,7 +758,6 @@ def capstone_list_by_category(request, category):
             Q(authors__icontains=q) |
             Q(instructor__icontains=q) |
             Q(category__name__icontains=q) |
-            Q(subcategory__name__icontainsq:=q) |  # typo-proofing disabled; next line real one
             Q(subcategory__name__icontains=q) |
             Q(tags__name__icontains=q)
         )
@@ -788,14 +787,18 @@ def capstone_list_by_category(request, category):
         .distinct()
     )
 
-    approved_ids = PaperAccessRequest.objects.filter(
-        user=request.user,
-        status='approved',
-        expires_at__gte=timezone.now()
-    ).values_list('paper_id', flat=True)
+    # Only non-verified users need approved access; verified can view all papers
+    role = getattr(getattr(request.user, 'userprofile', None), 'role', 'non_verified')
+    approved_ids = []
+    if role == 'non_verified':
+        approved_ids = PaperAccessRequest.objects.filter(
+            user=request.user,
+            status='approved',
+            expires_at__gte=timezone.now()
+        ).values_list('paper_id', flat=True)
 
     can_upload = (
-        request.user.userprofile.role == 'verified'
+        role == 'verified'
         and getattr(request.user.userprofile, 'can_upload', False)
     )
 
@@ -980,14 +983,19 @@ def toggle_upload_access(request, user_id):
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
 def request_access_view(request, paper_id):
+    """
+    Verified, Admin, and Instructor can view directly — no request flow.
+    Only non-verified users submit access requests.
+    """
     paper   = get_object_or_404(CapstonePaper, id=paper_id)
     profile = request.user.userprofile
 
-    # Instructors/Admins should NOT request access; they can view directly.
-    if profile.role in ['admin', 'instructor']:
-        messages.info(request, "Instructors and admins can view all papers without requesting access.")
-        return redirect('capstones_by_category', category=paper.category.slug)
+    # Admin/Instructor/Verified → view directly
+    if profile.role in ['admin', 'instructor', 'verified']:
+        messages.info(request, "You can view this paper directly.")
+        return redirect('view_paper', paper_id=paper.id)
 
+    # (Only non-verified users reach here)
     if request.method == 'POST':
         form = PaperAccessRequestForm(request.POST)
         if form.is_valid():
@@ -1000,10 +1008,6 @@ def request_access_view(request, paper_id):
             return redirect('capstones_main')
     else:
         form = PaperAccessRequestForm()
-        if profile.role == 'verified':
-            # Verified users don't need address/phone
-            form.fields['address'].widget = forms.HiddenInput()
-            form.fields['phone'].widget   = forms.HiddenInput()
 
     return render(request, 'core/request_access.html', {'form': form, 'paper': paper})
 
@@ -1440,6 +1444,7 @@ def most_accessed_api(request):
             "views": [d["views"] for d in monthly]
         }
     })
+
 # ── Preferences & Help ─────────────────────────────────────────────────────────
 
 @never_cache
