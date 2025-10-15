@@ -4,5 +4,5 @@ dj-database-url
 python-dotenv
 psycopg2-binary
 whitenoise
-widget-tweaks
+django-widget-tweaks
 colorfield
