@@ -2,7 +2,7 @@ services:
   - type: web
     name: capstonevault
     env: python
-    workingDir: .  # ⚠️ now we’re already inside /backend, so just a dot
+    workingDir: .  # already inside /backend due to Root Directory setting
 
     buildCommand: |
       pip install -r ../requirements.txt
