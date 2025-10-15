@@ -15,6 +15,10 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    
+    # ADD THIS LINE to tell Django where the project is
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+    
     execute_from_command_line(sys.argv)
 
 
