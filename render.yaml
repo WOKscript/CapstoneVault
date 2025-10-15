@@ -2,7 +2,7 @@ services:
   - type: web
     name: capstonevault
     env: python
-    workingDir: backend  # ✅ run everything inside /backend
+    workingDir: .  # ⚠️ now we’re already inside /backend, so just a dot
 
     buildCommand: |
       pip install -r ../requirements.txt
