@@ -2,7 +2,7 @@ services:
   - type: web
     name: capstonevault
     env: python
-    workingDir: backend   # 👈 forces Render to run all commands inside /backend
+    workingDir: backend   # This makes all commands run from /backend
 
     buildCommand: |
       pip install -r ../requirements.txt
