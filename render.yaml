@@ -2,9 +2,9 @@ services:
   - type: web
     name: capstonevault
     env: python
+    workingDir: backend   # 👈 forces Render to run all commands inside /backend
 
     buildCommand: |
-      cd backend
       pip install -r ../requirements.txt
       python manage.py collectstatic --noinput --clear
 
