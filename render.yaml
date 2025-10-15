@@ -2,11 +2,14 @@ services:
   - type: web
     name: capstonevault
     env: python
-    workingDir: backend
+    workingDir: backend  # ✅ run everything inside /backend
+
     buildCommand: |
       pip install -r ../requirements.txt
       python manage.py collectstatic --noinput --clear
+
     startCommand: gunicorn backend.wsgi:application
+
     envVars:
       - key: DEBUG
         value: "False"
