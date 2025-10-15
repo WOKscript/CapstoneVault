@@ -2,13 +2,13 @@ services:
   - type: web
     name: capstonevault
     env: python
-    workingDir: backend   # This makes all commands run from /backend
+    workingDir: backend
 
     buildCommand: |
       pip install -r ../requirements.txt
       python manage.py collectstatic --noinput --clear
 
-    startCommand: gunicorn backend.wsgi:application
+    startCommand: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT
 
     envVars:
       - key: DEBUG
@@ -23,6 +23,8 @@ services:
         fromDatabase:
           name: capstonevault-db
           property: connectionString
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
 
 databases:
   - name: capstonevault-db
