@@ -5,12 +5,9 @@ services:
     
     buildCommand: |
       pip install -r requirements.txt
-      cd backend
-      python manage.py collectstatic --noinput --clear
+      cd backend && python manage.py collectstatic --noinput --clear
 
-    startCommand: |
-      cd backend
-      gunicorn backend.wsgi:application
+    startCommand: sh -c "cd backend && exec gunicorn backend.wsgi:application"
 
     envVars:
       - key: DEBUG
