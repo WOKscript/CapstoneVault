@@ -2,14 +2,18 @@ services:
   - type: web
     name: capstonevault
     env: python
-    buildCommand: pip install -r requirements.txt && cd backend && python manage.py collectstatic --noinput
-    startCommand: cd backend && gunicorn backend.wsgi:application
+
+    buildCommand: |
+      pip install -r requirements.txt
+      python backend/manage.py collectstatic --noinput
+
+    startCommand: gunicorn backend.backend.wsgi:application --chdir backend
 
     envVars:
       - key: DEBUG
         value: "False"
       - key: DJANGO_SETTINGS_MODULE
-        value: backend.settings
+        value: backend.backend.settings
       - key: PYTHON_VERSION
         value: 3.12.3
       - key: SECRET_KEY
