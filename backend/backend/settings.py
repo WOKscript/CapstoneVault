@@ -5,7 +5,7 @@ import dj_database_url
 from dotenv import load_dotenv
 
 # ===== Base setup =====
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent  # points to /backend
 load_dotenv(BASE_DIR / ".env")
 
 # ===== Security =====
@@ -32,7 +32,7 @@ INSTALLED_APPS = [
 # ===== Middleware =====
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # must be right after SecurityMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -50,7 +50,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "core" / "templates"],
+        "DIRS": [BASE_DIR / "core" / "templates"],  # /backend/core/templates
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -79,14 +79,15 @@ else:
     DATABASES = {"default": dj_database_url.config(default=LOCAL_DB_URL)}
 
 # ===== Static and Media =====
+# Since manage.py is inside /backend, BASE_DIR = /backend
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "core" / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "core" / "static"]  # points to /backend/core/static
+STATIC_ROOT = BASE_DIR / "staticfiles"            # /backend/staticfiles (auto-created)
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Use compressed, hashed static file storage in production
+# WhiteNoise - enable compressed static files for production
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ===== Email Configuration =====
