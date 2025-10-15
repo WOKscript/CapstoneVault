@@ -67,22 +67,27 @@ TEMPLATES = [
 LOCAL_DB_URL = "postgresql://postgres:1234@localhost:5432/capstonevault_db"
 RENDER_DB_URL = os.getenv("DATABASE_URL")
 
-# Detect if running on Render by checking hostname
-IS_RENDER = "render" in socket.getfqdn().lower()
-
-if IS_RENDER and RENDER_DB_URL:
+if RENDER_DB_URL:
     print("🔗 Using Render PostgreSQL database.")
-    DATABASES = {"default": dj_database_url.config(default=RENDER_DB_URL)}
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=RENDER_DB_URL, conn_max_age=600, ssl_require=True
+        )
+    }
 else:
     print("💾 Using local PostgreSQL database.")
     DATABASES = {"default": dj_database_url.config(default=LOCAL_DB_URL)}
 
 # ===== Static and Media =====
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "core" / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Use compressed, hashed static file storage in production
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ===== Email Configuration =====
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

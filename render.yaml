@@ -4,16 +4,17 @@ services:
     env: python
 
     buildCommand: |
-      pip install -r requirements.txt
-      python backend/manage.py collectstatic --noinput --clear
+      cd backend
+      pip install -r ../requirements.txt
+      python manage.py collectstatic --noinput --clear
 
-    startCommand: gunicorn backend.backend.wsgi:application --chdir backend
+    startCommand: gunicorn backend.wsgi:application
 
     envVars:
       - key: DEBUG
         value: "False"
       - key: DJANGO_SETTINGS_MODULE
-        value: backend.backend.settings
+        value: backend.settings
       - key: PYTHON_VERSION
         value: 3.12.3
       - key: SECRET_KEY

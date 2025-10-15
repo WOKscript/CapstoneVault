@@ -28,9 +28,10 @@ env/
 Thumbs.db
 
 # Django static & media (generated files)
-staticfiles/
-media/
+backend/staticfiles/
+backend/media/
 
 # Migrations (optional: keep if you want version control for them)
 **/migrations/*.py
 !**/migrations/__init__.py
+
