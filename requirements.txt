@@ -1,0 +1,8 @@
+django
+gunicorn
+dj-database-url
+python-dotenv
+psycopg2-binary
+whitenoise
+widget-tweaks
+colorfield
