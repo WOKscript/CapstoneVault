@@ -6,3 +6,7 @@ psycopg2-binary
 whitenoise
 django-widget-tweaks
 django-colorfield
+joblib
+scikit-learn  # if you're using sklearn models
+numpy         # usually required with joblib
+pandas        # if you're doing data processing
