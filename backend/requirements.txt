@@ -18,6 +18,10 @@ numpy
 # Timezone support
 pytz
 
+# PDF processing
+PyPDF2
+reportlab
+
 # Note: The following are part of Python standard library (no install needed):
 # - os, io, logging, datetime, timedelta
 # - All django.* imports are from Django package above
