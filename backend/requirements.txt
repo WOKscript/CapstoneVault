@@ -1,12 +1,23 @@
+# Django and core dependencies
 django>=5.0
 gunicorn
 dj-database-url
 python-dotenv
 psycopg2-binary
 whitenoise
+
+# Django extensions
 django-widget-tweaks
 django-colorfield
+
+# Machine Learning
 joblib
-scikit-learn  # if you're using sklearn models
-numpy         # usually required with joblib
-pandas        # if you're doing data processing
+scikit-learn
+numpy
+
+# Timezone support
+pytz
+
+# Note: The following are part of Python standard library (no install needed):
+# - os, io, logging, datetime, timedelta
+# - All django.* imports are from Django package above
