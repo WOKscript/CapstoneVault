@@ -31,7 +31,5 @@ Thumbs.db
 backend/staticfiles/
 backend/media/
 
-# Migrations (optional: keep if you want version control for them)
-**/migrations/*.py
-!**/migrations/__init__.py
-
+# Migrations cache only (keep migration files for version control)
+**/migrations/__pycache__/
