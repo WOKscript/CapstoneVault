@@ -62,10 +62,10 @@ logger = logging.getLogger(__name__)
 BASE_DIR = settings.BASE_DIR
 ML_DIR = os.path.join(BASE_DIR, 'core', 'ml_models')
 try:
-    tfidf_cat = joblib.load(os.path.join(ML_DIR, 'tfidf_category_3rd_intel_ver.pkl'))
-    svm_cat = joblib.load(os.path.join(ML_DIR, 'svm_category_3rd_intel_ver.pkl'))
-    tfidf_sub = joblib.load(os.path.join(ML_DIR, 'tfidf_subcategory_3rd_intel_ver.pkl'))
-    svm_sub = joblib.load(os.path.join(ML_DIR, 'svm_subcategory_3rd_intel_ver.pkl'))
+    tfidf_cat = joblib.load(os.path.join(ML_DIR, 'tfidf_category_7th_intel_ver.pkl'))
+    svm_cat = joblib.load(os.path.join(ML_DIR, 'svm_category_7th_intel_ver.pkl'))
+    tfidf_sub = joblib.load(os.path.join(ML_DIR, 'tfidf_subcategory_7th_intel_ver.pkl'))
+    svm_sub = joblib.load(os.path.join(ML_DIR, 'svm_subcategory_7th_intel_ver.pkl'))
 except Exception:
     tfidf_cat = svm_cat = tfidf_sub = svm_sub = None  # safe fallback
 
