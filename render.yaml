@@ -26,6 +26,11 @@ services:
           name: capstonevault-db
           property: connectionString
 
+disks:
+  - name: capstonevault-media
+    mountPath: /app/media
+    sizeGB: 1
+
 databases:
   - name: capstonevault-db
     plan: free
