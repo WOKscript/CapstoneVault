@@ -34,9 +34,4 @@ backend/media/
 # Migrations cache only (keep migration files for version control)
 **/migrations/__pycache__/
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*.pyc
-*.pyo
-*.pyd
+
