@@ -6,7 +6,20 @@ from dotenv import load_dotenv
 
 # ===== Base setup =====
 BASE_DIR = Path(__file__).resolve().parent.parent  # points to /backend
-load_dotenv(BASE_DIR / ".env")
+
+# Try to load /backend/.env first (local), else fallback to root .env (Render)
+local_env = BASE_DIR / ".env"
+global_env = BASE_DIR.parent / ".env"
+
+if local_env.exists():
+    load_dotenv(local_env)
+    print("💾 Loaded local .env (backend/.env)")
+elif global_env.exists():
+    load_dotenv(global_env)
+    print("🌍 Loaded global .env (project root)")
+else:
+    print("⚠️ No .env file found — using defaults.")
+
 
 # ===== Security =====
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-key")
@@ -67,16 +80,21 @@ TEMPLATES = [
 LOCAL_DB_URL = "postgresql://postgres:1234@localhost:5432/capstonevault_db"
 RENDER_DB_URL = os.getenv("DATABASE_URL")
 
-if RENDER_DB_URL:
-    print("🔗 Using Render PostgreSQL database.")
+# FIXED: disable SSL locally, enable SSL only for Render
+if RENDER_DB_URL and "onrender" in socket.gethostname():
+    print("🔗 Using Render PostgreSQL database (SSL enabled).")
     DATABASES = {
         "default": dj_database_url.config(
             default=RENDER_DB_URL, conn_max_age=600, ssl_require=True
         )
     }
 else:
-    print("💾 Using local PostgreSQL database.")
-    DATABASES = {"default": dj_database_url.config(default=LOCAL_DB_URL)}
+    print("💾 Using local PostgreSQL database (no SSL).")
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=LOCAL_DB_URL, conn_max_age=0, ssl_require=False
+        )
+    }
 
 # ===== Static and Media =====
 # Since manage.py is inside /backend, BASE_DIR = /backend
