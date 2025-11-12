@@ -157,11 +157,17 @@ class StyledPasswordChangeForm(PasswordChangeForm):
 
 # ===== CAPSTONE PAPER =======================================================
 class CapstonePaperForm(forms.ModelForm):
-    """Upload/edit form. Category/subcategory/tags are auto-filled by ML in views."""
+    """
+    Upload/edit form. Category/subcategory/tags are auto-filled by ML in views.
+    NOTE: We keep the DB field name `instructor` for compatibility but label it as “Adviser”.
+    """
     class Meta:
         model = CapstonePaper
-        # adviser → instructor; status/feedback are intentionally NOT here
+        # status/feedback are intentionally NOT here
         fields = ["title", "abstract", "authors", "file", "publication_year", "instructor"]
+        labels = {
+            "instructor": "Adviser",
+        }
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter title"}),
             "abstract": forms.Textarea(attrs={
@@ -173,7 +179,7 @@ class CapstonePaperForm(forms.ModelForm):
             # Hint the browser we want PDFs
             "file": forms.ClearableFileInput(attrs={"class": "form-control", "accept": "application/pdf"}),
             "publication_year": forms.NumberInput(attrs={"class": "form-control no-spinner", "placeholder": "e.g. 2025"}),
-            "instructor": forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter instructor name"}),
+            "instructor": forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter adviser name"}),
         }
 
     def clean_publication_year(self):
@@ -233,7 +239,8 @@ class PaperAccessRequestForm(forms.ModelForm):
             raise ValidationError("Enter a valid phone number.")
         return phone
 
-# === Preferences & Help =======================================================
+
+# === Preferences & Help =====================================================
 class PreferencesForm(forms.Form):
     THEME_CHOICES = [
         ("system", "System default"),
