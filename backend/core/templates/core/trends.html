@@ -10,9 +10,9 @@
 
   <style>
     .chart-wrap { width: 100%; }
-    #chartYearly     { min-height: 320px; }  /* Pie */
-    #chartStacked    { min-height: 360px; }  /* Line by category */
-    #chartTopPapers  { min-height: 380px; }  /* Horizontal bar (baseline; JS may override) */
+    #chartYearly     { min-height: 320px; }
+    #chartStacked    { min-height: 360px; }
+    #chartTopPapers  { min-height: 380px; } 
   </style>
 
   <!-- Papers per Year (PIE) -->
@@ -23,7 +23,7 @@
     </div>
   </div>
 
-  <!-- Papers by Category (LINE by year) -->
+  <!-- Papers by Category (LINE) -->
   <div class="card shadow-sm mb-3">
     <div class="card-body">
       <h6 class="card-title mb-3">Papers by Category (Line by Year)</h6>
@@ -31,11 +31,12 @@
     </div>
   </div>
 
-  <!-- Most Accessed (horizontal bar) + AY selector -->
+  <!-- Most Accessed Papers (BAR CHART) -->
   <div class="card shadow-sm mb-3">
     <div class="card-body">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <h6 class="mb-0">Most Accessed Papers (by School Year)</h6>
+
         <div class="d-flex align-items-center gap-2">
           <label class="form-label mb-0 small">School Year</label>
           <select id="aySelect" class="form-select form-select-sm"></select>
@@ -46,176 +47,153 @@
   </div>
 </div>
 
-<!-- ApexCharts CDN -->
+<!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
 <script>
 (function () {
-  // optional: set a custom palette (leave undefined to use default theme)
   const palette = undefined;
 
-  // ---- fetch helper ----
   async function fetchJSON(url) {
     const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
 
-  // ---- AY selector (auto-create ascending from current AY; AY starts in August) ----
-  const AY_START = 8;                 // August
-  const AY_YEARS_AHEAD = 5;           // how many AYs forward to list (configurable)
+  // ---- AY selector ----
+  const AY_START = 8;
+  const AY_YEARS_AHEAD = 5;
 
   function ayFor(d) {
     const y = d.getFullYear(), m = d.getMonth() + 1;
-    return (m >= AY_START) ? `${y}-${y+1}` : `${y-1}-${y}`;
-  }
-  function ayStartYear(ayStr) {       // "2025-2026" -> 2025
-    return parseInt(ayStr.slice(0, 4), 10);
+    return m >= AY_START ? `${y}-${y+1}` : `${y-1}-${y}`;
   }
 
-  const aySelect = document.getElementById('aySelect');
+  function ayStartYear(ayString) {
+    return parseInt(ayString.slice(0, 4), 10);
+  }
+
+  const aySelect = document.getElementById("aySelect");
   const nowAY = ayFor(new Date());
-  const start = ayStartYear(nowAY);
+  const startYear = ayStartYear(nowAY);
 
-  // Build ascending list: current AY then forward
   const ayList = [];
   for (let i = 0; i < AY_YEARS_AHEAD; i++) {
-    const y1 = start + i;
-    ayList.push(`${y1}-${y1 + 1}`);
+    ayList.push(`${startYear + i}-${startYear + i + 1}`);
   }
 
-  // Populate dropdown (ascending), default select = current AY
   ayList.forEach(ay => {
-    const opt = document.createElement('option');
-    opt.value = ay;
-    opt.textContent = ay;
-    if (ay === nowAY) opt.selected = true;
-    aySelect.appendChild(opt);
+    const option = document.createElement("option");
+    option.value = ay;
+    option.textContent = ay;
+    if (ay === nowAY) option.selected = true;
+    aySelect.appendChild(option);
   });
 
-  // ---- Chart handles ----
+  // ---- Charts ----
   let chartYearlyPie = null;
   let chartCategoryLine = null;
   let chartTopPapers = null;
 
-  // ---- Base Trends (from trends_api) ----
+  // Load yearly & category trends
   fetchJSON("{% url 'trends_api' %}")
     .then(data => {
-      // 1) Papers per Year → PIE
       chartYearlyPie = new ApexCharts(document.querySelector("#chartYearly"), {
-        chart: { type: 'pie', height: 320, toolbar: { show: true } },
+        chart: { type: "pie", height: 320 },
         series: data.yearly.counts,
         labels: data.yearly.labels,
-        legend: { position: 'bottom' },
-        dataLabels: { enabled: true, formatter: (val) => `${val.toFixed(1)}%` },
-        tooltip: { y: { formatter: (v) => v } },
+        legend: { position: "bottom" },
         colors: palette
       });
       chartYearlyPie.render();
 
-      // 2) Papers by Category → LINE
       chartCategoryLine = new ApexCharts(document.querySelector("#chartStacked"), {
-        chart: { type: 'line', height: 360, toolbar: { show: true } },
-        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
-        xaxis: { categories: data.stackedByCategory.labels, labels: { rotate: -20 } },
-        stroke: { curve: 'smooth', width: 3 },
+        chart: { type: "line", height: 360 },
+        series: data.stackedByCategory.series,
+        xaxis: { categories: data.stackedByCategory.labels },
+        stroke: { curve: "smooth", width: 3 },
         markers: { size: 4 },
-        dataLabels: { enabled: false },
-        yaxis: { labels: { formatter: v => Math.round(v) } },
-        legend: { position: 'top' },
-        tooltip: { y: { formatter: (v) => v } },
+        legend: { position: "top" },
         colors: palette
       });
       chartCategoryLine.render();
-    })
-    .catch(err => console.error('trends_api error:', err));
+    });
 
-  // ===========================
-  // Most Accessed (by AY) logic
-  // ===========================
+  // ===============================
+  //      MOST ACCESSED (BAR)
+  // ===============================
 
   const mountTop = document.getElementById('chartTopPapers');
-  let reqToken = 0; // prevent race conditions between quick AY switches
+  let reqToken = 0;
 
-  function setLoading(msg) {
-    if (chartTopPapers) { chartTopPapers.destroy(); chartTopPapers = null; }
-    mountTop.innerHTML = `<div class="text-muted small ms-1 mt-2">${msg}</div>`;
-  }
-
-  // Sanitize API rows (null-safe title, numeric views)
   function sanitizeTopPapers(rows) {
     if (!Array.isArray(rows)) return [];
-    return rows
-      .map((r) => {
-        const rawTitle = (r?.title ?? '').toString().trim();
-        const title = rawTitle.length ? rawTitle : '(Untitled)';
-        const viewsNum = Number(r?.views);
-        const views = Number.isFinite(viewsNum) && viewsNum >= 0 ? viewsNum : 0;
-        return { title, views };
-      })
-      .filter((r) => r.title);
+    return rows.map(r => ({
+      title: (r?.title ?? "").toString().trim() || "(Untitled)",
+      views: Number(r?.views) || 0
+    }));
   }
 
-  // Dynamic chart height so bars don’t feel cramped
-  function computeBarHeight(n) {
-    // ~36px per bar + some headroom; clamp 260–520
-    const base = 36 * Math.max(n, 3) + 120;
-    return Math.max(260, Math.min(base, 520));
+  function computeHeight(n) {
+    return Math.max(320, Math.min(640, 70 * Math.max(n, 3)));
   }
 
   async function loadAY(ay) {
     const myToken = ++reqToken;
+    mountTop.innerHTML = `<div class="text-muted small">Loading ${ay}…</div>`;
+    if (chartTopPapers) { chartTopPapers.destroy(); chartTopPapers = null; }
+
     try {
-      setLoading(`Loading ${ay}…`);
-      const d = await fetchJSON(`{% url 'most_accessed_api' %}?ay=${encodeURIComponent(ay)}`);
-      if (myToken !== reqToken) return; // a newer request started
+      const data = await fetchJSON(`{% url 'most_accessed_api' %}?ay=${ay}`);
+      if (myToken !== reqToken) return;
 
-      const papers = sanitizeTopPapers(d?.topPapers ?? []);
-      mountTop.innerHTML = '';
-
+      const papers = sanitizeTopPapers(data.topPapers);
       if (!papers.length) {
-        mountTop.innerHTML = `<div class="text-muted small ms-1 mt-2">No views recorded for ${ay}.</div>`;
+        mountTop.innerHTML = `<div class="text-muted small">No data for ${ay}.</div>`;
         return;
       }
 
-      const labels = papers.map(p => {
-        const t = p.title;
-        return t.length > 40 ? t.slice(0, 40) + '…' : t;
-      });
+      const labels = papers.map(p =>
+        p.title.length > 30 ? p.title.slice(0, 30) + "…" : p.title
+      );
+
       const values = papers.map(p => p.views);
-      const height = computeBarHeight(papers.length);
+      const height = computeHeight(papers.length);
 
       chartTopPapers = new ApexCharts(mountTop, {
-        chart: { type: 'bar', height, toolbar: { show: true } },
-        series: [{ name: 'Views', data: values }],
-        xaxis: { categories: labels, labels: { trim: true } },
-        plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
-        dataLabels: { enabled: false },
+        chart: { type: "bar", height },
+        series: [{ name: "Views", data: values }],
+        plotOptions: {
+          bar: {
+            horizontal: false,
+            columnWidth: "45%",
+            borderRadius: 6
+          }
+        },
+        xaxis: {
+          categories: labels,
+          labels: { rotate: -45, style: { fontSize: "11px" } }
+        },
+        yaxis: { labels: { formatter: (v) => Math.round(v) } },
         tooltip: {
-          y: { formatter: v => v },
+          y: { formatter: (v) => v },
           x: {
-            formatter: (val, ctx) => {
-              const item = papers[ctx?.dataPointIndex ?? -1];
-              return item?.title || val || '(Untitled)';
-            }
+            formatter: (label, ctx) => papers[ctx.dataPointIndex].title
           }
         },
         colors: palette
       });
-      await chartTopPapers.render();
-    } catch (e) {
-      if (myToken !== reqToken) return;
-      console.error('most_accessed_api error:', e);
-      mountTop.innerHTML = `<div class="text-danger small ms-1 mt-2">Failed to load ${ay}. Check console.</div>`;
+
+      chartTopPapers.render();
+
+    } catch (err) {
+      mountTop.innerHTML = `<div class="text-danger small">Error loading ${ay}.</div>`;
     }
   }
 
-  aySelect.addEventListener('change', () => loadAY(aySelect.value));
-  loadAY(nowAY); // ensure default selection loads current AY
+  aySelect.addEventListener("change", () => loadAY(aySelect.value));
+  loadAY(nowAY);
 
-  // Nudge charts after sidebar toggle (layout width change)
-  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
-    setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
-  });
 })();
 </script>
 {% endblock %}
