@@ -702,36 +702,90 @@ def upload_paper_view(request):
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
 @login_required
+def search_results_view(request):
+    q = (request.GET.get("q") or "").strip()
+
+    if not q:
+        return render(request, "core/search_results.html", {
+            "papers": [],
+            "query": q,
+            "count": 0,
+        })
+
+    # SMART PAPER SEARCH
+    papers = (
+        CapstonePaper.objects.filter(
+            Q(title__icontains=q) |
+            Q(abstract__icontains=q) |
+            Q(authors__icontains=q) |
+            Q(instructor__icontains=q) |
+            Q(category__name__icontains=q) |
+            Q(subcategory__name__icontains=q) |
+            Q(tags__name__icontains=q)
+        )
+        .distinct()
+        .order_by("-publication_year", "title")
+    )
+
+    return render(request, "core/search_results.html", {
+        "papers": papers,
+        "query": q,
+        "count": papers.count(),
+    })
+
+
+@never_cache
+@cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)
+@login_required
 def capstones_main_view(request):
     """
-    Categories page with:
-      - search by category name (?q=)
-      - sort by name or paper count (?sort=name|count)
-      - paper_count counts ALL papers (no status anymore)
+    SMART CATEGORY SEARCH:
+      - Exact category match (shows categories)
+      - Otherwise redirect to GLOBAL PAPER SEARCH
+      - Deep search: title, tags, subcategory
     """
     q = (request.GET.get("q") or "").strip()
     sort = (request.GET.get("sort") or "").strip()
 
-    categories = Category.objects.annotate(paper_count=Count("capstonepaper"))
+    # Base queryset
+    categories = Category.objects.all()
 
+    # If user typed something
     if q:
-        categories = categories.filter(name__icontains=q)
+        # 1. Check if the search matches ANY category name
+        cat_matches = categories.filter(name__icontains=q).annotate(
+            paper_count=Count("capstonepaper")
+        )
 
-    categories = (
-        categories.order_by("-paper_count", "name")
-        if sort == "count"
-        else categories.order_by("name")
-    )
+        # 2. If user searches for something NOT a category → redirect to /search/
+        if not cat_matches.exists():
+            return redirect(f"/search/?q={q}")
 
+        # 3. Category matched → show category results
+        categories = cat_matches
+
+    else:
+        # No search → show all categories
+        categories = categories.annotate(paper_count=Count("capstonepaper"))
+
+    # SORTING
+    if sort == "count":
+        categories = categories.order_by("-paper_count", "name")
+    else:
+        categories = categories.order_by("name")
+
+    # Upload permission (same logic)
     can_upload = (
-        request.user.userprofile.role == 'verified'
-        and getattr(request.user.userprofile, 'can_upload', False)
+        request.user.userprofile.role == "verified"
+        and getattr(request.user.userprofile, "can_upload", False)
     )
 
-    return render(request, 'core/capstones.html', {
-        'categories': categories,
-        'can_upload': can_upload,
+    return render(request, "core/capstones.html", {
+        "categories": categories,
+        "can_upload": can_upload,
     })
+
+
 
 @never_cache
 @cache_control(no_store=True, no_cache=True, must_revalidate=True, max_age=0)

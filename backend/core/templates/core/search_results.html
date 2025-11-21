@@ -1,0 +1,406 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  :root { --ctl-h: 42px; }
+
+  /* ------- Toolbar ------- */
+  .search-card {
+    background: #f8f9fa;
+    border: none;
+    border-radius: .75rem;
+  }
+  
+  .toolbar { 
+    gap: .5rem; 
+  }
+  
+  /* Custom search input styling - with border and larger padding */
+  .search-input-group {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: .5rem;
+    overflow: hidden;
+    transition: all .15s ease-in-out;
+    height: 48px; /* Fixed height */
+  }
+  
+  .search-input-group:focus-within {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, .15);
+  }
+  
+  .search-input-icon {
+    padding: 0 1rem 0 1.25rem;
+    background: white;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+    height: 100%;
+  }
+  
+  .search-input-field {
+    flex: 1;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 0 1.25rem 0 .5rem;
+    height: 100%;
+    background: transparent;
+    font-size: 1rem;
+  }
+  
+  .search-input-field:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  .search-input-field::placeholder {
+    color: #9ca3af;
+  }
+  
+  /* Make buttons exactly same height as search input */
+  .toolbar .btn {
+    height: 48px; /* Same as search-input-group */
+    padding: 0 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 500;
+    border-radius: .5rem;
+  }
+
+  /* ------- Cards ------- */
+  .card-clean {
+    border: 0;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+    transition: transform .15s ease, box-shadow .15s ease;
+    border-radius: .75rem;
+    overflow: hidden;
+    background: #fff;
+  }
+  
+  .card-clean:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); 
+  }
+
+  .paper-card-header {
+    background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+    color: #fff;
+    padding: 1rem 1.25rem;
+  }
+  
+  .paper-title { 
+    font-weight: 700; 
+    font-size: 1rem; 
+    line-height: 1.3; 
+    margin-bottom: .5rem; 
+    color: #fff; 
+  }
+  
+  .paper-meta { 
+    font-size: .8rem; 
+    opacity: .95; 
+  }
+
+  .paper-authors { 
+    font-size: .85rem; 
+    color: #6c757d; 
+    margin-bottom: .75rem; 
+  }
+
+  .line-clamp-2 { 
+    display: -webkit-box; 
+    -webkit-line-clamp: 2; 
+    -webkit-box-orient: vertical; 
+    overflow: hidden; 
+  }
+
+  .tag {
+    font-size: .7rem; 
+    background: #e7f1ff; 
+    color: #0d6efd;
+    border: 1px solid #d5e6ff; 
+    border-radius: 9999px;
+    padding: .2rem .5rem;
+  }
+  
+  .tag-wrap { 
+    max-height: 56px; 
+    overflow: auto; 
+  }
+
+  .card-footer { 
+    background: transparent; 
+    border-top: 1px solid #f1f3f4; 
+    padding: 1rem; 
+  }
+
+  .actions { 
+    gap: .75rem; 
+    display: flex; 
+    flex-direction: column; 
+  }
+  
+  .btn-view-pdf {
+    background: #0d6efd; 
+    border: none; 
+    color: #fff; 
+    font-weight: 600;
+    padding: .7rem 1.2rem; 
+    border-radius: .5rem; 
+    font-size: .9rem;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    box-shadow: 0 .25rem .75rem rgba(13,110,253,.18);
+  }
+  
+  .btn-view-pdf:hover { 
+    background: #0b5ed7; 
+    color: #fff; 
+    transform: translateY(-1px); 
+    box-shadow: 0 .5rem 1rem rgba(13,110,253,.25); 
+  }
+
+  .btn-secondary-actions { 
+    display: flex; 
+    gap: .5rem; 
+    justify-content: space-between; 
+  }
+  
+  .btn-secondary-actions .btn { 
+    flex: 1; 
+    font-size: .8rem; 
+    padding: .45rem .8rem; 
+    border-radius: .5rem; 
+  }
+
+  .modal-body p { 
+    text-align: justify; 
+  }
+  
+  /* Results counter */
+  .results-counter {
+    background: #e7f1ff;
+    color: #0d6efd;
+    padding: .25rem .75rem;
+    border-radius: 9999px;
+    font-size: .875rem;
+    font-weight: 500;
+  }
+  
+  @media (max-width: 768px) {
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+    
+    .toolbar .input-group {
+      width: 100%;
+      margin-bottom: .5rem;
+    }
+    
+    .toolbar .btn-group {
+      display: flex;
+      gap: .5rem;
+      width: 100%;
+    }
+    
+    .toolbar .btn-group .btn {
+      flex: 1;
+    }
+  }
+</style>
+
+<!-- Header with Breadcrumb -->
+<div class="mb-4">
+  <nav aria-label="breadcrumb" class="mb-2">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'capstones_main' %}">Capstones</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Search</li>
+    </ol>
+  </nav>
+  
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="mb-0">Search Results</h3>
+    <span class="results-counter">{{ count }} result{{ count|pluralize }}</span>
+  </div>
+</div>
+
+<!-- Search Toolbar -->
+<div class="search-card mb-4">
+  <div class="card-body">
+    <form method="get">
+      <div class="toolbar d-flex align-items-center">
+        <div class="search-input-group">
+          <div class="search-input-icon">
+            <i class="bi bi-search"></i>
+          </div>
+          <input 
+            type="text"
+            name="q"
+            value="{{ query }}"
+            class="search-input-field"
+            placeholder="Search papers by title, tag, author, topic…"
+            autofocus>
+        </div>
+
+        <div class="btn-group ms-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search"></i> Search
+          </button>
+
+          {% if query %}
+            <a href="{% url 'search_results' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-counterclockwise"></i> Clear
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Results Grid -->
+{% if papers %}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+
+    {% for paper in papers %}
+      <div class="col">
+        <div class="card card-clean h-100">
+
+          <!-- Card Header -->
+          <div class="paper-card-header">
+            <div class="paper-title line-clamp-2">{{ paper.title }}</div>
+            <div class="paper-meta">
+              {{ paper.publication_year }} • {{ paper.category.name }}{% if paper.subcategory %} / {{ paper.subcategory.name }}{% endif %}
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="card-body d-flex flex-column">
+            <div class="paper-authors">
+              <strong>Authors:</strong> {{ paper.authors }}
+              {% if paper.adviser %}<br><strong>Adviser:</strong> {{ paper.adviser }}{% endif %}
+            </div>
+
+            {% if paper.tags.all %}
+              <div class="tag-wrap d-flex flex-wrap gap-1 mt-auto">
+                {% for tag in paper.tags.all %}
+                  <span class="badge tag">{{ tag.name }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="card-footer">
+            <div class="actions">
+
+              {% with role=request.user.userprofile.role %}
+                {% if role == 'admin' or role == 'instructor' %}
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                  <div class="btn-secondary-actions">
+                    <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
+                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                  </div>
+
+                {% elif role == 'verified' %}
+                  <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                  <div class="btn-secondary-actions">
+                    {% if request.user == paper.uploaded_by %}
+                      <a href="{% url 'edit_paper' paper.id %}" class="btn btn-outline-warning btn-sm">Edit</a>
+                      <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delModal{{ paper.id }}">Delete</button>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                  </div>
+
+                {% else %}
+                  {% if paper.id in approved_access_ids %}
+                    <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
+                  {% else %}
+                    <a href="{% url 'request_access' paper.id %}" class="btn btn-view-pdf w-100" style="background:#ff9800;">Request Access</a>
+                  {% endif %}
+                  <div class="btn-secondary-actions">
+                    <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#infoModal{{ paper.id }}">Info</button>
+                  </div>
+
+                {% endif %}
+              {% endwith %}
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- INFO MODAL -->
+      <div class="modal fade" id="infoModal{{ paper.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">{{ paper.title }}</h5>
+              <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p><strong>Authors:</strong> {{ paper.authors }}</p>
+              {% if paper.adviser %}<p><strong>Adviser:</strong> {{ paper.adviser }}</p>{% endif %}
+              <p><strong>Year:</strong> {{ paper.publication_year }}</p>
+              <p><strong>Category:</strong> {{ paper.category.name }}{% if paper.subcategory %} / {{ paper.subcategory.name }}{% endif %}</p>
+              {% if paper.abstract %}<p><strong>Abstract:</strong> {{ paper.abstract }}</p>{% endif %}
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE MODAL -->
+      <div class="modal fade" id="delModal{{ paper.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Delete Paper</h5>
+              <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              Are you sure you want to delete "<strong>{{ paper.title }}</strong>"?
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <form action="{% url 'delete_paper' paper.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+    <h5 class="mt-3">No papers found</h5>
+    <p class="text-muted">Try adjusting your search keywords or clearing the filter.</p>
+    {% if query %}
+      <a href="{% url 'search_results' %}" class="btn btn-outline-primary mt-2">
+        <i class="bi bi-arrow-counterclockwise"></i> Clear Search
+      </a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

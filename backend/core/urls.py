@@ -23,7 +23,8 @@ urlpatterns = [
     path('users/<int:user_id>/delete/',  views.delete_user_view,      name='delete_user'),
     path('users/<int:user_id>/toggle/',  views.toggle_user_status,    name='toggle_user_status'),
     path('users/<int:user_id>/reset-password/', views.reset_user_password, name='reset_user_password'),
-
+    
+    path('search/', views.search_results_view, name='search_results'),
     path('upload/',                         views.upload_paper_view,           name='upload_capstone'),
     path('capstones/',                      views.capstones_main_view,         name='capstones_main'),
     path('capstones/<slug:category>/',      views.capstone_list_by_category,   name='capstones_by_category'),
