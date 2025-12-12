@@ -8,7 +8,7 @@
     <p class="text-muted small mb-0">Quick overview of trends and actions</p>
   </div>
 
-  <!-- Analytics Section (no stat cards) -->
+  <!-- Analytics Section -->
   <div class="row g-3">
     <!-- Yearly Output -->
     <div class="col-lg-4 col-md-6">
@@ -96,70 +96,106 @@
   }
 
   const AY_START_MONTH = 8; // August
-  function ayFor(d){ const y=d.getFullYear(), m=d.getMonth()+1; return (m>=AY_START_MONTH)?`${y}-${y+1}`:`${y-1}-${y}`; }
-
-  const currentAY = ayFor(new Date());
-  const ayList = Array.from({length:5},(_,i)=>{const base=parseInt(currentAY.slice(0,4))-i; return `${base}-${base+1}`;});
+  function ayFor(d){
+    const y = d.getFullYear(), m = d.getMonth()+1;
+    return (m>=AY_START_MONTH) ? `${y}-${y+1}` : `${y-1}-${y}`;
+  }
 
   const elMiniYearly   = document.querySelector('#miniYearly');
   const elMiniCategory = document.querySelector('#miniCategory');
   const elMiniMostAcc  = document.querySelector('#miniMostAccessed');
   const elMiniAyLabel  = document.querySelector('#miniAyLabel');
 
-  const chartColors = ['#0d6efd','#6610f2','#6f42c1','#d63384','#dc3545','#fd7e14','#ffc107','#198754'];
+  // SAME EVSU CRIMSON PALETTE AS INSTRUCTOR DASHBOARD
+  const chartColors = [
+    "#b80a0a",
+    "#8b0000",
+    "#eab308",
+    "#0d9488",
+    "#1d4ed8",
+    "#64748b",
+    "#059669",
+    "#f97316"
+  ];
 
-  // Yearly Output & Category Trend
+  // Yearly Output & Category Trend (mini, sparkline style)
   fetchJSON("{% url 'trends_api' %}")
-    .then(data=>{
-      new ApexCharts(elMiniYearly,{
-        chart:{type:'donut',height:220},
-        series:data.yearly.counts, labels:data.yearly.labels, colors:chartColors,
-        legend:{position:'bottom',fontSize:'12px'},
-        dataLabels:{enabled:true,style:{fontSize:'12px'}},
-        plotOptions:{pie:{donut:{size:'65%',labels:{show:true,total:{show:true,label:'Total',fontSize:'14px',fontWeight:600}}}}}
+    .then(data => {
+      new ApexCharts(elMiniYearly, {
+        chart: { type: 'donut', height: 200, sparkline: { enabled: true } },
+        series: data.yearly.counts,
+        labels: data.yearly.labels,
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } },
+        colors: chartColors
       }).render();
 
-      new ApexCharts(elMiniCategory,{
-        chart:{type:'line',height:220,toolbar:{show:false}},
-        series:data.stackedByCategory.series.map(s=>({name:s.name,data:s.data})),
-        xaxis:{categories:data.stackedByCategory.labels}, colors:chartColors,
-        stroke:{curve:'smooth',width:2}, markers:{size:4},
-        legend:{position:'bottom',fontSize:'12px'}, grid:{borderColor:'#f1f1f1'}
+      new ApexCharts(elMiniCategory, {
+        chart: { type: 'line', height: 200, sparkline: { enabled: true } },
+        series: data.stackedByCategory.series.map(s => ({
+          name: s.name,
+          data: s.data
+        })),
+        xaxis: { categories: data.stackedByCategory.labels },
+        stroke: { curve: 'smooth', width: 2 },
+        markers: { size: 0 },
+        dataLabels: { enabled: false },
+        tooltip: { y: { formatter: v => v } },
+        colors: chartColors
       }).render();
     })
-    .catch(e=>console.error('trends_api error:',e));
+    .catch(e => console.error('trends_api error:', e));
 
-  // Most Accessed (first AY with data)
-  async function renderMost(ay){
-    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay="+encodeURIComponent(ay));
-    const papers = d.topPapers||[];
-    if(!papers.length) return false;
+  // Most Accessed (same behavior as instructor mini chart)
+  const currentAY = ayFor(new Date());
+  const ayCandidates = Array.from({ length: 5 }, (_, i) => {
+    const base = parseInt(currentAY.slice(0,4)) - i;
+    return `${base}-${base+1}`;
+  });
 
-    const labels = papers.map(p=>p.title.length>25?p.title.slice(0,25)+'…':p.title);
-    const views  = papers.map(p=>p.views);
-    elMiniMostAcc.innerHTML='';
+  async function renderMostAccessed(ay) {
+    const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
+    const papers = d.topPapers || [];
+    if (!papers.length) return false;
 
-    new ApexCharts(elMiniMostAcc,{
-      chart:{type:'bar',height:220,toolbar:{show:false}},
-      series:[{name:'Views',data:views}],
-      xaxis:{categories:labels}, colors:['#0d6efd'],
-      plotOptions:{bar:{horizontal:true,borderRadius:4}},
-      dataLabels:{enabled:false}, grid:{borderColor:'#f1f1f1'},
-      tooltip:{y:{formatter:v=>v+' views'},x:{formatter:(val,{dataPointIndex})=>papers[dataPointIndex]?.title||val}}
+    const labels = papers.map(p =>
+      p.title.length > 25 ? p.title.slice(0, 25) + '…' : p.title
+    );
+    const views = papers.map(p => p.views);
+    elMiniMostAcc.innerHTML = '';
+
+    new ApexCharts(elMiniMostAcc, {
+      chart: { type: 'bar', height: 200, sparkline: { enabled: true } },
+      series: [{ name: 'Views', data: views }],
+      xaxis: { categories: labels },
+      plotOptions: { bar: { horizontal: true, barHeight: '70%' } },
+      dataLabels: { enabled: false },
+      tooltip: {
+        y: { formatter: v => v },
+        x: { formatter: (val, ctx) => papers[ctx.dataPointIndex]?.title || val }
+      },
+      colors: [chartColors[0]]
     }).render();
 
-    if(elMiniAyLabel) elMiniAyLabel.textContent = `Academic Year ${ay}`;
+    if (elMiniAyLabel) elMiniAyLabel.textContent = `Academic Year ${ay}`;
     return true;
   }
 
-  (async()=>{
-    let ok=false;
-    for(const ay of ayList){
-      try{ ok = await renderMost(ay); if(ok) break; }catch(e){ console.error('most_accessed_api error',ay,e); }
+  (async () => {
+    let ok = false;
+    for (const ay of ayCandidates) {
+      try {
+        ok = await renderMostAccessed(ay);
+        if (ok) break;
+      } catch (e) {
+        console.error('most_accessed_api error for', ay, e);
+      }
     }
-    if(!ok){
-      if(elMiniAyLabel) elMiniAyLabel.textContent = currentAY;
-      elMiniMostAcc.innerHTML = '<div class="text-center text-muted small py-4">No views recorded yet</div>';
+    if (!ok) {
+      if (elMiniAyLabel) elMiniAyLabel.textContent = currentAY;
+      elMiniMostAcc.innerHTML =
+        '<div class="text-center text-muted small py-4">No views recorded yet.</div>';
     }
   })();
 })();

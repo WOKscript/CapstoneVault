@@ -2,43 +2,72 @@
 {% load static %}
 
 {% block content %}
-<div class="container py-3">
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h3 class="mb-0">Research Trends</h3>
-    <span class="text-muted small">Visible to all logged-in users</span>
-  </div>
+<div class="trends-page">
 
   <style>
+    /* Header panel (matches admin/user headers) */
+    .trends-header-panel {
+      background: var(--bg-primary);
+      border-radius: .75rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid #eef1f4;
+      border-left: 4px solid var(--evsu-crimson);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1rem;
+    }
+
+    .trends-header-panel h3 {
+      letter-spacing: .2px;
+    }
+
+    /* Cards styling */
+    .trends-page .card {
+      border-radius: .75rem;
+      border: 1px solid #eef1f4;
+      box-shadow: var(--shadow-sm);
+    }
+
     .chart-wrap { width: 100%; }
     #chartYearly     { min-height: 320px; }
     #chartStacked    { min-height: 360px; }
-    #chartTopPapers  { min-height: 380px; } 
+    #chartTopPapers  { min-height: 380px; }
   </style>
 
+  <!-- Header -->
+  <div class="trends-header-panel d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h3 class="mb-1 fw-bold text-primary">Research Trends</h3>
+      <p class="text-muted small mb-0">
+        Visual analytics of CapstoneVault research output and access patterns
+      </p>
+    </div>
+    <span class="text-muted small">Visible to all logged-in users</span>
+  </div>
+
   <!-- Papers per Year (PIE) -->
-  <div class="card shadow-sm mb-3">
+  <div class="card mb-3">
     <div class="card-body">
-      <h6 class="card-title mb-3">Papers per Year</h6>
+      <h6 class="card-title mb-3 fw-semibold">Papers per Year</h6>
       <div id="chartYearly" class="chart-wrap"></div>
     </div>
   </div>
 
   <!-- Papers by Category (LINE) -->
-  <div class="card shadow-sm mb-3">
+  <div class="card mb-3">
     <div class="card-body">
-      <h6 class="card-title mb-3">Papers by Category (Line by Year)</h6>
+      <h6 class="card-title mb-3 fw-semibold">Papers by Category (Line by Year)</h6>
       <div id="chartStacked" class="chart-wrap"></div>
     </div>
   </div>
 
   <!-- Most Accessed Papers (BAR CHART) -->
-  <div class="card shadow-sm mb-3">
+  <div class="card mb-3">
     <div class="card-body">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <h6 class="mb-0">Most Accessed Papers (by School Year)</h6>
+        <h6 class="mb-0 fw-semibold">Most Accessed Papers (by School Year)</h6>
 
         <div class="d-flex align-items-center gap-2">
-          <label class="form-label mb-0 small">School Year</label>
+          <label class="form-label mb-0 small text-muted">School Year</label>
           <select id="aySelect" class="form-select form-select-sm"></select>
         </div>
       </div>
@@ -52,7 +81,17 @@
 
 <script>
 (function () {
-  const palette = undefined;
+  // EVSU-themed palette (crimson + supporting colors)
+  const palette = [
+    "#b80a0a", // EVSU crimson
+    "#8b0000", // dark crimson
+    "#eab308", // gold
+    "#0d9488", // teal
+    "#1d4ed8", // blue
+    "#64748b", // slate
+    "#059669", // green
+    "#f97316"  // orange
+  ];
 
   async function fetchJSON(url) {
     const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
@@ -181,7 +220,7 @@
             formatter: (label, ctx) => papers[ctx.dataPointIndex].title
           }
         },
-        colors: palette
+        colors: [palette[0]] // crimson for access bars
       });
 
       chartTopPapers.render();

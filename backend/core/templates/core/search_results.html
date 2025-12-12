@@ -1,4 +1,4 @@
-{% extends "core/base.html" %}
+{% extends "core/base.html" %} 
 {% load static %}
 
 {% block content %}
@@ -8,8 +8,8 @@
 
   /* ------- Toolbar ------- */
   .search-card {
-    background: #f8f9fa;
-    border: none;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     border-radius: .75rem;
   }
   
@@ -23,8 +23,8 @@
     min-width: 280px;
     display: flex;
     align-items: center;
-    background: white;
-    border: 1px solid #dee2e6;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: .5rem;
     overflow: hidden;
     transition: all .15s ease-in-out;
@@ -32,8 +32,8 @@
   }
   
   .search-input-group:focus-within {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, .15);
+    border-color: var(--primary-color, #b80a0a);
+    box-shadow: 0 0 0 0.2rem rgba(184, 10, 10, .15);
   }
   
   .search-input-icon {
@@ -93,8 +93,9 @@
     box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); 
   }
 
+  /* SOLID crimson header (no gradient) */
   .paper-card-header {
-    background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+    background: var(--primary-color, #b80a0a);
     color: #fff;
     padding: 1rem 1.25rem;
   }
@@ -127,9 +128,9 @@
 
   .tag {
     font-size: .7rem; 
-    background: #e7f1ff; 
-    color: #0d6efd;
-    border: 1px solid #d5e6ff; 
+    background: rgba(184, 10, 10, 0.06); 
+    color: var(--primary-color, #b80a0a);
+    border: 1px solid rgba(184, 10, 10, 0.2); 
     border-radius: 9999px;
     padding: .2rem .5rem;
   }
@@ -152,7 +153,7 @@
   }
   
   .btn-view-pdf {
-    background: #0d6efd; 
+    background: var(--primary-color, #b80a0a); 
     border: none; 
     color: #fff; 
     font-weight: 600;
@@ -160,14 +161,14 @@
     border-radius: .5rem; 
     font-size: .9rem;
     transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-    box-shadow: 0 .25rem .75rem rgba(13,110,253,.18);
+    box-shadow: 0 .25rem .75rem rgba(184,10,10,.25);
   }
   
   .btn-view-pdf:hover { 
-    background: #0b5ed7; 
+    background: var(--primary-dark, #8f0606); 
     color: #fff; 
     transform: translateY(-1px); 
-    box-shadow: 0 .5rem 1rem rgba(13,110,253,.25); 
+    box-shadow: 0 .5rem 1rem rgba(184,10,10,.35); 
   }
 
   .btn-secondary-actions { 
@@ -187,10 +188,10 @@
     text-align: justify; 
   }
   
-  /* Results counter */
+  /* Results counter pill - crimson theme */
   .results-counter {
-    background: #e7f1ff;
-    color: #0d6efd;
+    background: rgba(184, 10, 10, 0.06);
+    color: var(--primary-color, #b80a0a);
     padding: .25rem .75rem;
     border-radius: 9999px;
     font-size: .875rem;
@@ -348,7 +349,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">{{ paper.title }}</h5>
+              <h5 class="modal-title text-white">{{ paper.title }}</h5>
               <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">

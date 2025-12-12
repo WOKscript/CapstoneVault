@@ -6,6 +6,16 @@
   <style>
     :root { --ctl-h: 38px; }
 
+    /* ------- Page Header Panel (matches EVSU admin/user header) ------- */
+    .capstones-header-panel {
+      background: var(--bg-primary);
+      border-radius: .75rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid #eef1f4;
+      border-left: 4px solid var(--evsu-crimson);
+      box-shadow: var(--shadow-sm);
+    }
+
     /* ------- Toolbar (search + sort + buttons) ------- */
     .toolbar { gap:.5rem; }
     .toolbar .form-control,
@@ -28,7 +38,7 @@
       .w-md-180 { width:180px; }
     }
 
-    /* ------- Paper cards ------- */
+    /* ------- Paper cards (EVSU theme) ------- */
     .card-clean {
       border:0;
       box-shadow:0 .125rem .25rem rgba(0,0,0,.075);
@@ -37,55 +47,159 @@
       overflow:hidden;
       background:#fff;
     }
-    .card-clean:hover { transform:translateY(-2px); box-shadow:0 .5rem 1rem rgba(0,0,0,.15); }
+    .card-clean:hover {
+      transform:translateY(-2px);
+      box-shadow:0 .5rem 1rem rgba(15,23,42,.15);
+    }
 
     .paper-card-header {
-      background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+      background: linear-gradient(135deg, var(--evsu-crimson) 0%, var(--evsu-dark-crimson) 100%);
       color:#fff;
       padding:1rem 1.25rem;
       position:relative;
     }
-    .paper-title { font-weight:700; font-size:1rem; line-height:1.3; margin-bottom:.5rem; color:#fff; }
-    .paper-meta { font-size:.8rem; opacity:.95; }
+    .paper-title {
+      font-weight:700;
+      font-size:1rem;
+      line-height:1.3;
+      margin-bottom:.5rem;
+      color:#fff;
+    }
+    .paper-meta {
+      font-size:.8rem;
+      opacity:.95;
+    }
 
-    .paper-authors { font-size:.85rem; color:#6c757d; margin-bottom:.75rem; }
+    .paper-authors {
+      font-size:.85rem;
+      color:#6c757d;
+      margin-bottom:.75rem;
+    }
 
-    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .line-clamp-2 {
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
 
     .tag {
-      font-size:.7rem; background:#e7f1ff; color:#0d6efd;
-      border:1px solid #d5e6ff; border-radius:9999px;
-      padding:.2rem .5rem;
+      font-size:.7rem;
+      background: rgba(184, 10, 10, 0.06);
+      color: var(--evsu-crimson);
+      border:1px solid rgba(184, 10, 10, 0.23);
+      border-radius:9999px;
+      padding:.2rem .55rem;
+      font-weight:500;
     }
     .tag-wrap { max-height:56px; overflow:auto; }
 
-    .card-footer { background:transparent; border-top:1px solid #f1f3f4; padding:1rem; }
+    .card-footer {
+      background:transparent;
+      border-top:1px solid #f1f3f4;
+      padding:1rem;
+    }
 
-    .actions { gap:.75rem; display:flex; flex-direction:column; }
+    .actions {
+      gap:.75rem;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Main action button (View PDF) – crimson gradient */
     .btn-view-pdf {
-      background:#0d6efd; border:none; color:#fff; font-weight:600;
-      padding:.7rem 1.2rem; border-radius:.5rem; font-size:.9rem;
-      transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
-      box-shadow:0 .25rem .75rem rgba(13,110,253,.18);
+      background: linear-gradient(135deg, var(--evsu-crimson) 0%, var(--evsu-dark-crimson) 100%);
+      border:none;
+      color:#fff;
+      font-weight:600;
+      padding:.7rem 1.2rem;
+      border-radius:.5rem;
+      font-size:.9rem;
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease, opacity .15s ease;
+      box-shadow:0 .25rem .75rem rgba(184, 10, 10, .22);
     }
-    .btn-view-pdf:hover { background:#0b5ed7; color:#fff; transform:translateY(-1px); box-shadow:0 .5rem 1rem rgba(13,110,253,.25); }
+    .btn-view-pdf:hover {
+      color:#fff;
+      transform:translateY(-1px);
+      box-shadow:0 .5rem 1.2rem rgba(148, 27, 27, .35);
+      opacity: .95;
+    }
 
-    .btn-secondary-actions { display:flex; gap:.5rem; justify-content:space-between; }
-    .btn-secondary-actions .btn { flex:1; font-size:.8rem; padding:.45rem .8rem; border-radius:.5rem; }
+    /* Request Access button – themed warning tone */
+    .btn-request-access {
+      background: linear-gradient(135deg, var(--warning-color) 0%, #facc15 100%);
+      border:none;
+      color:#fff;
+      font-weight:600;
+      padding:.7rem 1.2rem;
+      border-radius:.5rem;
+      font-size:.9rem;
+      transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      box-shadow:0 .25rem .75rem rgba(245, 158, 11, .25);
+    }
+    .btn-request-access:hover {
+      color:#fff;
+      transform:translateY(-1px);
+      box-shadow:0 .5rem 1.2rem rgba(202, 138, 4, .35);
+      opacity:.96;
+    }
 
-    .muted { color: rgba(0,0,0,.6); }
+    .btn-secondary-actions {
+      display:flex;
+      gap:.5rem;
+      justify-content:space-between;
+    }
+    .btn-secondary-actions .btn {
+      flex:1;
+      font-size:.8rem;
+      padding:.45rem .8rem;
+      border-radius:.5rem;
+    }
+
+    .muted { color: rgba(100,116,139,.95); }
+
     .chip {
-      background:#f8f9fa; border:1px solid #e9ecef; border-radius:9999px;
-      padding:.2rem .6rem; font-size:.75rem;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:9999px;
+      padding:.2rem .6rem;
+      font-size:.75rem;
+      color:#475569;
     }
 
+    /* Info modal body text */
     .modal-body p { text-align: justify; }
+
+    /* EVSU modal header styles */
+    .modal-header-evsu {
+      background: linear-gradient(135deg, var(--evsu-crimson) 0%, var(--evsu-dark-crimson) 100%);
+      color:#ffffff;
+      border-bottom:none;
+    }
+    .modal-header-evsu .modal-title {
+      color:#ffffff;
+      font-weight:600;
+    }
+    .modal-header-evsu .btn-close {
+      filter: invert(1) grayscale(1);
+      opacity:.85;
+    }
+    .modal-header-evsu .btn-close:hover {
+      opacity:1;
+    }
   </style>
 
   <!-- Header -->
-  <div class="d-flex flex-wrap justify-content-between align-items-end mb-2">
-    <h3 class="mb-0">{{ category.name }} Capstones</h3>
-    {% if papers %}<span class="muted small">{{ papers|length }} result{{ papers|length|pluralize }}</span>{% endif %}
+  <div class="capstones-header-panel d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-1 fw-bold text-primary">{{ category.name }} Capstones</h3>
+      <p class="text-muted small mb-0">Browse approved research under this category</p>
+    </div>
+    {% if papers %}
+      <span class="muted small fw-semibold">
+        {{ papers|length }} result{{ papers|length|pluralize }}
+      </span>
+    {% endif %}
   </div>
 
   <!-- Breadcrumb + Toolbar -->
@@ -97,13 +211,15 @@
       </ol>
     </nav>
 
-    <!-- SEARCH / SORT (layout only changed) -->
+    <!-- SEARCH / SORT -->
     <form method="get" class="toolbar d-flex flex-wrap justify-content-end align-items-center">
       {% if selected_year %}<input type="hidden" name="year" value="{{ selected_year }}">{% endif %}
       {% if selected_subcategory %}<input type="hidden" name="subcategory" value="{{ selected_subcategory }}">{% endif %}
 
       <div class="input-group me-0 me-md-2 mb-2 mb-md-0">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <span class="input-group-text">
+          <i class="bi bi-search text-muted"></i>
+        </span>
         <input
           type="text"
           name="q"
@@ -196,7 +312,7 @@
                     {% if paper.id in approved_access_ids %}
                       <a href="{% url 'view_paper' paper.id %}" class="btn btn-view-pdf w-100">View PDF</a>
                     {% else %}
-                      <a href="{% url 'request_access' paper.id %}" class="btn btn-view-pdf w-100" style="background:#ff9800; color:#fff;">Request Access</a>
+                      <a href="{% url 'request_access' paper.id %}" class="btn btn-request-access w-100">Request Access</a>
                     {% endif %}
                     <div class="btn-secondary-actions">
                       <button type="button" class="btn btn-outline-secondary btn-sm w-100"
@@ -213,8 +329,8 @@
         <div class="modal fade" id="infoModal{{ paper.id }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">{{ paper.title }}</h5>
+              <div class="modal-header modal-header-evsu">
+                <h5 class="modal-title text-white">{{ paper.title }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
@@ -224,8 +340,8 @@
                 <p><strong>Category:</strong> {{ paper.category.name }}{% if paper.subcategory %} / {{ paper.subcategory.name }}{% endif %}</p>
                 {% if paper.abstract %}<p><strong>Abstract:</strong> {{ paper.abstract }}</p>{% endif %}
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
               </div>
             </div>
           </div>
@@ -235,19 +351,21 @@
         <div class="modal fade" id="delModal{{ paper.id }}" tabindex="-1" aria-labelledby="delLabel{{ paper.id }}" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="delLabel{{ paper.id }}">Delete Paper</h5>
+              <div class="modal-header border-0 bg-danger bg-opacity-10">
+                <h5 class="modal-title fw-semibold text-white" id="delLabel{{ paper.id }}">
+                  <i class="bi bi-exclamation-triangle me-2"></i>Delete Paper
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 Are you sure you want to delete "<strong>{{ paper.title }}</strong>"?
                 This action cannot be undone.
               </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
                 <form action="{% url 'delete_paper' paper.id %}" method="post" class="d-inline">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-danger">Delete</button>
+                  <button type="submit" class="btn btn-danger rounded-pill">Delete</button>
                 </form>
               </div>
             </div>

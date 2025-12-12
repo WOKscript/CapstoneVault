@@ -14,8 +14,14 @@
 
   <style>
     :root{
-      --bg-body:#f8fafc; --panel:#fff; --ink:#0f172a; --muted:#64748b; --border:#e5e7eb;
-      --cv-blue:#2563eb; --cv-blue-dark:#1e40af;
+      --bg-body:#f8fafc;
+      --panel:#fff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      /* Use EVSU crimson as accent; fall back to hex if not defined */
+      --cv-accent: var(--evsu-crimson, #b80a0a);
+      --cv-accent-dark: var(--evsu-dark-crimson, #8f0606);
     }
     html,body{height:100%; overflow:hidden;}
     body{
@@ -24,16 +30,17 @@
       -webkit-user-select:none; -moz-user-select:none; user-select:none; -webkit-touch-callout:none;
     }
 
-    /* Fixed blue nav */
+    /* Fixed header - solid crimson */
     .hdr{
       position:fixed; top:0; left:0; right:0; z-index:1030;
       display:flex; justify-content:space-between; align-items:center; gap:16px;
       height:56px; padding:0 16px;
-      background:linear-gradient(0deg,var(--cv-blue),var(--cv-blue-dark));
-      color:#fff; box-shadow:0 2px 10px rgba(0,0,0,.08);
+      background:var(--cv-accent);
+      color:#fff;
+      box-shadow:0 2px 10px rgba(0,0,0,.08);
     }
     .title{font-size:1rem; font-weight:700; margin:0; color:#fff}
-    .meta{font-size:.8rem; color:#e5edff}
+    .meta{font-size:.8rem; color:#ffe2e2}
     .right{display:flex; gap:8px; align-items:center}
     .badge-protected{font-size:.7rem}
     .btn-plain{
@@ -85,7 +92,7 @@
       transition:opacity .2s ease, visibility .2s ease;
     }
     .loading-overlay.hide{ opacity:0; visibility:hidden; }
-    .spinner-border{ width:2.75rem; height:2.75rem; color:var(--cv-blue); }
+    .spinner-border{ width:2.75rem; height:2.75rem; color:var(--cv-accent); }
     .loading-text{ margin-top:.75rem; font-size:.9rem; color:var(--muted); }
 
     /* ANTI-SHOT overlay (pure white cover above canvas) */
@@ -111,7 +118,7 @@
 </head>
 <body>
 
-  <!-- FIXED BLUE NAV -->
+  <!-- FIXED HEADER -->
   <div class="hdr">
     <div>
       <div class="title d-flex align-items-center gap-2">
@@ -252,7 +259,7 @@
       window.addEventListener('blur', showWhiteout);
       window.addEventListener('focus', hideWhiteout);
 
-      // Whiteout if the mouse leaves the window (helps with Win+Shift+S which often steals focus)
+      // Whiteout if the mouse leaves the window
       let leaveTimer=null;
       window.addEventListener('mouseleave', ()=>{
         clearTimeout(leaveTimer);
@@ -263,7 +270,7 @@
         hideWhiteout();
       });
 
-      // Extra: If PrintScreen is detected (some browsers deliver it), blank immediately
+      // Extra: If PrintScreen is detected
       window.addEventListener('keydown', (e)=>{
         if (e.key === 'PrintScreen') showWhiteout();
       }, true);

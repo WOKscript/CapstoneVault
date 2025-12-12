@@ -3,17 +3,23 @@
 
 {% block content %}
 <div class="container-fluid px-0 px-md-2">
-  <div class="card border-0 shadow-sm overflow-hidden">
-    <!-- Admin-style header (visual only) -->
-    <div class="card-header bg-primary text-white">
-      <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-plus me-2"></i> Upload Capstone Paper</h5>
+  <div class="card border-0 shadow-sm overflow-hidden upload-card">
+    <!-- Header -->
+    <div class="card-header upload-header text-white">
+      <h5 class="mb-0 fw-bold text-white">
+        <i class="bi bi-file-earmark-plus me-2"></i>
+        Upload Capstone Paper
+      </h5>
       <small class="opacity-75">Please provide complete details and upload a PDF.</small>
     </div>
 
-    <div class="card-body p-4">
+    <div class="card-body p-4 upload-form-body">
       {% if form.errors %}
         <div class="alert alert-danger border-0 shadow-sm mb-4">
-          <h6 class="mb-2 fw-semibold"><i class="bi bi-exclamation-triangle me-2"></i>Please correct the following errors:</h6>
+          <h6 class="mb-2 fw-semibold">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Please correct the following errors:
+          </h6>
           {% for field, errors in form.errors.items %}
             {% for error in errors %}
               <p class="mb-1"><strong>{{ field|title }}:</strong> {{ error }}</p>
@@ -22,7 +28,7 @@
         </div>
       {% endif %}
 
-      <!-- SAME FORM / FIELDS / NAMES (unchanged) -->
+      <!-- FORM: fields unchanged -->
       <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
@@ -86,7 +92,7 @@
           <div class="form-text">Upload a PDF file (max 20MB).</div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 upload-actions">
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-upload me-1"></i>Upload Paper
           </button>
@@ -100,11 +106,57 @@
 </div>
 
 <style>
-  /* Visual-only tweaks to match admin */
-  .card { border-radius: .5rem; }
-  .card-header { border-bottom: 0; }
-  .form-label { letter-spacing: .2px; }
-  .form-control, .form-select { border-radius: .5rem; }
-  .btn { border-radius: .5rem; }
+  .upload-card {
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-md, 0 10px 25px rgba(15, 23, 42, 0.12));
+    background: var(--bg-primary, #ffffff);
+  }
+
+  /* solid crimson header (no gradient) */
+  .upload-header {
+    background: var(--evsu-crimson, #b80a0a);
+    border-bottom: 0;
+    padding: 1rem 1.5rem;
+  }
+
+  .upload-header h5 {
+    letter-spacing: 0.3px;
+  }
+
+  .upload-form-body .form-label {
+    letter-spacing: 0.2px;
+    color: #0f172a;
+  }
+
+  .upload-form-body .form-control,
+  .upload-form-body .form-select {
+    border-radius: 0.5rem;
+    border-color: #e2e8f0;
+  }
+
+  .upload-form-body .form-control:focus,
+  .upload-form-body .form-select:focus {
+    border-color: var(--evsu-crimson, #b80a0a);
+    box-shadow: 0 0 0 0.15rem rgba(184, 10, 10, 0.18);
+  }
+
+  .upload-actions .btn {
+    border-radius: 0.5rem;
+  }
+
+  .upload-actions .btn-primary {
+    background: var(--evsu-crimson, #b80a0a);
+    border: none;
+    box-shadow: 0 0.6rem 1.4rem rgba(184, 10, 10, 0.35);
+  }
+
+  .upload-actions .btn-primary:hover {
+    background: #a10909;
+    box-shadow: 0 0.9rem 2rem rgba(107, 5, 5, 0.45);
+  }
+
+  .upload-actions .btn-outline-secondary {
+    border-radius: 999px;
+  }
 </style>
 {% endblock %}

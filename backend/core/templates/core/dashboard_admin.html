@@ -185,55 +185,72 @@
     ayList.push(`${base}-${base + 1}`);
   }
 
-  // Elements
-  const elMiniYearly = document.querySelector("#miniYearly");
-  const elMiniCategory = document.querySelector("#miniCategory");
-  const elMiniMostAcc = document.querySelector("#miniMostAccessed");
-  const elMiniAyLabel = document.querySelector("#miniAyLabel");
+  // Read EVSU palette from CSS variables
+  const rootStyles     = getComputedStyle(document.documentElement);
+  const cCrimson       = rootStyles.getPropertyValue('--evsu-crimson').trim()       || '#8b1a1a';
+  const cDarkCrimson   = rootStyles.getPropertyValue('--evsu-dark-crimson').trim()  || '#5c0f0f';
+  const cLightCrimson  = rootStyles.getPropertyValue('--evsu-light-crimson').trim() || '#b22222';
+  const cGold          = rootStyles.getPropertyValue('--evsu-gold').trim()          || '#ffc107';
+  const cMutedGray     = '#94a3b8';
 
-  // Chart theme colors
-  const chartColors = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754'];
+  const chartColors = [cCrimson, cLightCrimson, cGold, cMutedGray];
+
+  // Elements
+  const elMiniYearly   = document.querySelector("#miniYearly");
+  const elMiniCategory = document.querySelector("#miniCategory");
+  const elMiniMostAcc  = document.querySelector("#miniMostAccessed");
+  const elMiniAyLabel  = document.querySelector("#miniAyLabel");
 
   // Yearly + Category Charts
   fetchJSON("{% url 'trends_api' %}")
     .then(data => {
       // Yearly Output (donut)
-      new ApexCharts(elMiniYearly, {
-        chart: { type: 'donut', height: 220 },
-        series: data.yearly.counts,
-        labels: data.yearly.labels,
-        colors: chartColors,
-        legend: { position: 'bottom', fontSize: '12px' },
-        dataLabels: { enabled: true, style: { fontSize: '12px' } },
-        plotOptions: {
-          pie: {
-            donut: {
-              size: '65%',
-              labels: {
-                show: true,
-                total: {
+      if (elMiniYearly) {
+        new ApexCharts(elMiniYearly, {
+          chart: { type: 'donut', height: 220 },
+          series: data.yearly.counts,
+          labels: data.yearly.labels,
+          colors: chartColors,
+          legend: { position: 'bottom', fontSize: '12px' },
+          dataLabels: { enabled: true, style: { fontSize: '12px' } },
+          stroke: { width: 1, colors: ['#ffffff'] },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: '65%',
+                labels: {
                   show: true,
-                  label: 'Total',
-                  fontSize: '14px',
-                  fontWeight: 600
+                  total: {
+                    show: true,
+                    label: 'Total',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: cDarkCrimson
+                  }
                 }
               }
             }
           }
-        }
-      }).render();
+        }).render();
+      }
 
       // Category Trend (line)
-      new ApexCharts(elMiniCategory, {
-        chart: { type: 'line', height: 220, toolbar: { show: false } },
-        series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
-        xaxis: { categories: data.stackedByCategory.labels },
-        colors: chartColors,
-        stroke: { curve: 'smooth', width: 2 },
-        markers: { size: 4 },
-        legend: { position: 'bottom', fontSize: '12px' },
-        grid: { borderColor: '#f1f1f1' }
-      }).render();
+      if (elMiniCategory) {
+        const seriesColors = data.stackedByCategory.series.map((_, idx) => {
+          return chartColors[idx % chartColors.length];
+        });
+
+        new ApexCharts(elMiniCategory, {
+          chart: { type: 'line', height: 220, toolbar: { show: false } },
+          series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
+          xaxis: { categories: data.stackedByCategory.labels },
+          colors: seriesColors,
+          stroke: { curve: 'smooth', width: 2 },
+          markers: { size: 3 },
+          legend: { position: 'bottom', fontSize: '12px' },
+          grid: { borderColor: '#f1f1f1' }
+        }).render();
+      }
     })
     .catch(err => console.error('trends_api error:', err));
 
@@ -253,8 +270,14 @@
       chart: { type: 'bar', height: 220, toolbar: { show: false } },
       series: [{ name: 'Views', data: views }],
       xaxis: { categories: labels },
-      colors: ['#0d6efd'],
-      plotOptions: { bar: { horizontal: true, borderRadius: 4 } },
+      colors: [cCrimson],
+      plotOptions: { 
+        bar: { 
+          horizontal: true, 
+          borderRadius: 4,
+          barHeight: '70%'
+        } 
+      },
       dataLabels: { enabled: false },
       grid: { borderColor: '#f1f1f1' },
       tooltip: {

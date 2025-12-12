@@ -6,7 +6,7 @@
 {% block content %}
 <div class="user-management-page">
   <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 user-header-panel">
     <div>
       <h3 class="mb-1 fw-bold text-primary">Users</h3>
       <p class="text-muted small mb-0">Manage user accounts and permissions</p>
@@ -24,7 +24,7 @@
   <!-- Statistics Cards -->
   <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-primary">
+      <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
         <div class="card-body text-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
@@ -41,7 +41,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-primary">
+      <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
         <div class="card-body text-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
@@ -58,7 +58,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-primary">
+      <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
         <div class="card-body text-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
@@ -75,7 +75,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-      <div class="card border-0 shadow-sm h-100 bg-primary">
+      <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
         <div class="card-body text-white">
           <div class="d-flex align-items-center justify-content-between">
             <div>
@@ -184,7 +184,7 @@
                     <div class="fw-semibold">
                       {{ user.first_name }} {{ user.last_name }}
                       {% if user == request.user %}
-                        <span class="badge bg-info text-white ms-1">You</span>
+                        <span class="badge badge-you ms-1">You</span>
                       {% endif %}
                     </div>
                     <small class="text-muted">@{{ user.username }}</small>
@@ -345,8 +345,8 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold">
-          <i class="bi bi-pencil text-primary me-2"></i>Edit User
+        <h5 class="modal-title text-white fw-semibold">
+          <i class="bi bi-pencil text-white me-2"></i>Edit User
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
@@ -399,8 +399,8 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-semibold">
-          <i class="bi bi-key text-warning me-2"></i>Reset Password
+        <h5 class="modal-title text-white fw-semibold">
+          <i class="bi bi-key text-white me-2"></i>Reset Password
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
@@ -460,6 +460,30 @@
 </div>
 
 <style>
+.user-header-panel {
+  background: var(--bg-primary);
+  border-radius: .75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #eef1f4;
+  border-left: 4px solid var(--evsu-crimson);
+  box-shadow: var(--shadow-sm);
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.admin-dashboard .card,
+.user-management-page .card {
+  border-radius: 0.75rem;
+}
+
+/* Avatar circle inherits EVSU primary via bg-primary */
 .avatar-circle {
   width: 40px;
   height: 40px;
@@ -471,57 +495,83 @@
   flex-shrink: 0;
 }
 
+/* Table spacing */
 .table > :not(caption) > * > * {
   padding: 1rem;
   vertical-align: middle;
 }
 
+/* Generic badges */
 .badge {
   font-weight: 500;
   padding: 0.35em 0.75em;
   font-size: 0.8rem;
+  border-radius: 999px;
 }
 
+/* "You" badge */
+.badge-you {
+  background: linear-gradient(135deg, var(--evsu-gold) 0%, var(--evsu-light-crimson) 100%);
+  color: #ffffff;
+  border: none;
+}
+
+/* Role Badge Colors - EVSU Theme */
+.badge-admin {
+  background: linear-gradient(135deg, var(--evsu-crimson) 0%, var(--evsu-dark-crimson) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.9em;
+  letter-spacing: 0.3px;
+}
+
+.badge-instructor {
+  background: linear-gradient(135deg, #64748b 0%, #334155 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.9em;
+  letter-spacing: 0.3px;
+}
+
+.badge-verified {
+  background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.9em;
+  letter-spacing: 0.3px;
+}
+
+.badge-non-verified {
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%) !important;
+  color: #0f172a !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.4em 0.9em;
+  letter-spacing: 0.3px;
+}
+
+/* Button group sizing */
 .btn-group-sm > .btn {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
 }
 
-/* Role Badge Colors - Solid Bootstrap Colors */
-.badge-admin {
-  background-color: #dc3545 !important;
-  color: white !important;
-  font-weight: 600;
-  font-size: 0.75rem;
-  padding: 0.4em 0.85em;
-  letter-spacing: 0.3px;
+/* EVSU Crimson toggle checkbox/switch */
+.form-check-input:checked {
+  background-color: var(--evsu-crimson);
+  border-color: var(--evsu-crimson);
 }
 
-.badge-instructor {
-  background-color: #0d6efd !important;
-  color: white !important;
-  font-weight: 600;
-  font-size: 0.75rem;
-  padding: 0.4em 0.85em;
-  letter-spacing: 0.3px;
+.form-check-input:focus {
+  border-color: var(--evsu-crimson);
+  box-shadow: 0 0 0 0.2rem rgba(139, 26, 26, 0.25);
 }
 
-.badge-verified {
-  background-color: #198754 !important;
-  color: white !important;
-  font-weight: 600;
-  font-size: 0.75rem;
-  padding: 0.4em 0.85em;
-  letter-spacing: 0.3px;
-}
-
-.badge-non-verified {
-  background-color: #6c757d !important;
-  color: white !important;
-  font-weight: 600;
-  font-size: 0.75rem;
-  padding: 0.4em 0.85em;
-  letter-spacing: 0.3px;
+.form-switch .form-check-input:checked {
+  background-color: var(--evsu-crimson);
 }
 </style>
 
