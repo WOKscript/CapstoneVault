@@ -124,31 +124,51 @@
       {% if request.user.userprofile.role == 'admin' %}
         <div class="nav-section">
           <h6 class="nav-section-title px-3 mb-2 text-muted small fw-semibold text-uppercase">Administration</h6>
+
           <a href="{% url 'admin_dashboard' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
             <i class="bi bi-speedometer2 nav-icon"></i>
             <span class="nav-text">Dashboard</span>
           </a>
+
           <a href="{% url 'user_management' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}">
             <i class="bi bi-people nav-icon"></i>
             <span class="nav-text">User Management</span>
           </a>
+
+          <!-- ✅ Adviser Management (ADMIN) -->
+          <a href="{% url 'adviser_management' %}"
+             class="nav-link {% if request.resolver_match.url_name == 'adviser_management' or request.resolver_match.url_name == 'edit_adviser' %}active{% endif %}">
+            <i class="bi bi-person-lines-fill nav-icon"></i>
+            <span class="nav-text">Adviser Management</span>
+          </a>
+
           <a href="{% url 'audit_logs' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'audit_logs' or request.resolver_match.url_name == 'audit_log_detail' %}active{% endif %}">
             <i class="bi bi-clock-history nav-icon"></i>
             <span class="nav-text">Audit Logs</span>
           </a>
+
           <a href="{% url 'access_request_list' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'access_request_list' %}active{% endif %}">
             <i class="bi bi-key nav-icon"></i>
             <span class="nav-text">Access Requests</span>
           </a>
+
           <a href="{% url 'capstones_main' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'capstones_main' %}active{% endif %}">
             <i class="bi bi-journal-text nav-icon"></i>
             <span class="nav-text">Capstones</span>
           </a>
+
+          <!-- Admin can always upload -->
+          <a href="{% url 'upload_capstone' %}" 
+             class="nav-link {% if request.resolver_match.url_name == 'upload_capstone' %}active{% endif %}">
+            <i class="bi bi-cloud-upload nav-icon"></i>
+            <span class="nav-text">Upload PDF</span>
+          </a>
+
           <a href="{% url 'trends_dashboard' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'trends_dashboard' %}active{% endif %}">
             <i class="bi bi-graph-up nav-icon"></i>
@@ -169,6 +189,7 @@
             <i class="bi bi-journal-text nav-icon"></i>
             <span class="nav-text">Capstones</span>
           </a>
+          <!-- NOTE: Instructors CANNOT upload. No Upload PDF link here. -->
           <a href="{% url 'manage_upload_access' %}" 
              class="nav-link {% if request.resolver_match.url_name == 'manage_upload_access' %}active{% endif %}">
             <i class="bi bi-person-check nav-icon"></i>

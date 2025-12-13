@@ -19,7 +19,6 @@
       --ink:#0f172a;
       --muted:#64748b;
       --border:#e5e7eb;
-      /* Use EVSU crimson as accent; fall back to hex if not defined */
       --cv-accent: var(--evsu-crimson, #b80a0a);
       --cv-accent-dark: var(--evsu-dark-crimson, #8f0606);
     }
@@ -75,9 +74,40 @@
       flex:1 1 auto; overflow:auto;
       background:linear-gradient(180deg,#f1f5f9 0%, #eef2f7 100%);
       border-top:1px solid var(--border);
-      display:flex; justify-content:center; align-items:flex-start; padding:16px 0;
+      padding:16px 0;
     }
-    .page{ display:flex; justify-content:center; padding:20px 0 }
+
+    /* NEW: pages container so we don't wipe overlay/antiShot */
+    .pages{
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:20px;
+      padding-bottom:40px;
+    }
+
+    .page{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      padding:0 0;
+    }
+
+    .page-placeholder{
+      width:min(920px, 92vw);
+      border-radius:12px;
+      background:#fff;
+      border:1px solid rgba(15,23,42,.06);
+      box-shadow:0 10px 30px rgba(2,6,23,.06);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:.9rem;
+      padding:22px 16px;
+    }
+
     canvas{
       background:#fff; border-radius:12px;
       box-shadow:0 10px 30px rgba(2,6,23,.08), 0 0 0 1px rgba(15,23,42,.04) inset;
@@ -98,7 +128,7 @@
     /* ANTI-SHOT overlay (pure white cover above canvas) */
     .anti-shot{
       position:absolute; inset:0; z-index:6;
-      background:#fff; /* white-out */
+      background:#fff;
       opacity:0; visibility:hidden; transition:opacity .12s ease, visibility .12s ease;
       pointer-events:none;
     }
@@ -177,7 +207,9 @@
 
       <!-- ANTI-SHOT whiteout -->
       <div id="antiShot" class="anti-shot"></div>
-      <!-- Canvas/pages injected here -->
+
+      <!-- NEW: pages get injected here -->
+      <div id="pages" class="pages"></div>
     </div>
   </div>
 
@@ -221,8 +253,9 @@
       const RAW_URL = "{% url 'serve_secure_pdf' paper_id=paper.id %}?v={{ paper.updated_at|default:paper.uploaded_at|date:'U'|default:'0' }}";
 
       const viewer = document.getElementById('viewer');
+      const pagesEl = document.getElementById('pages');
       const overlay = document.getElementById('loadingOverlay');
-      const antiShot = document.getElementById('antiShot'); // ANTI-SHOT
+      const antiShot = document.getElementById('antiShot');
       const msg = document.getElementById('msg');
       const zoomInBtn = document.getElementById('zoomIn');
       const zoomOutBtn = document.getElementById('zoomOut');
@@ -232,12 +265,20 @@
       const prevBtn = document.getElementById('prevPage');
       const nextBtn = document.getElementById('nextPage');
 
-      let pdfDoc=null, scale=1.1, minScale=0.6, maxScale=2.0, step=0.15;
-      const state={rendering:false,pending:null,current:1, firstPaint:false};
+      let pdfDoc=null;
+      let scale=1.1, minScale=0.6, maxScale=2.0, step=0.15;
+      let isAutoScale = true;
 
-      function fitToWidth(viewportWidth){
+      const state = {
+        current: 1,
+        firstPaint: false,
+        generation: 0,
+        typing: false,
+      };
+
+      function fitToWidth(pageViewportWidth){
         const container = viewer.clientWidth || window.innerWidth;
-        const s = container / viewportWidth;
+        const s = container / pageViewportWidth;
         return Math.min(maxScale, Math.max(minScale, s));
       }
 
@@ -251,7 +292,6 @@
       const showWhiteout = ()=> antiShot && antiShot.classList.add('on');
       const hideWhiteout = ()=> antiShot && antiShot.classList.remove('on');
 
-      // Whiteout whenever the page/tab is not visible or window loses focus
       document.addEventListener('visibilitychange', ()=>{
         if (document.visibilityState !== 'visible') showWhiteout();
         else hideWhiteout();
@@ -259,7 +299,6 @@
       window.addEventListener('blur', showWhiteout);
       window.addEventListener('focus', hideWhiteout);
 
-      // Whiteout if the mouse leaves the window
       let leaveTimer=null;
       window.addEventListener('mouseleave', ()=>{
         clearTimeout(leaveTimer);
@@ -270,69 +309,172 @@
         hideWhiteout();
       });
 
-      // Extra: If PrintScreen is detected
       window.addEventListener('keydown', (e)=>{
         if (e.key === 'PrintScreen') showWhiteout();
       }, true);
       /* ======================================= */
 
-      const renderPage = (num)=>{
+      function updateZoomLabel(){
+        zoomLabel.textContent = Math.round((scale||1)*100) + '%';
+      }
+
+      function updateButtons(){
         if (!pdfDoc) return;
-        state.rendering = true;
+        prevBtn.disabled = state.current <= 1;
+        nextBtn.disabled = state.current >= pdfDoc.numPages;
+      }
+
+      function scrollToPage(n, behavior='smooth'){
+        if (!pdfDoc) return;
+        n = Math.min(Math.max(1, n), pdfDoc.numPages);
+        const el = pagesEl.querySelector(`[data-page-number="${n}"]`);
+        if (el) el.scrollIntoView({ behavior, block: 'start' });
+      }
+
+      // Build placeholders for continuous scroll
+      function buildPlaceholders(){
+        if (!pdfDoc) return;
+        state.generation += 1;
+        const gen = state.generation;
+
+        pagesEl.innerHTML = '';
+
+        for (let i = 1; i <= pdfDoc.numPages; i++){
+          const wrap = document.createElement('div');
+          wrap.className = 'page';
+          wrap.dataset.pageNumber = String(i);
+          wrap.dataset.rendered = '0';
+          wrap.dataset.rendering = '0';
+          wrap.dataset.gen = String(gen);
+
+          const ph = document.createElement('div');
+          ph.className = 'page-placeholder';
+          ph.textContent = `Loading page ${i}…`;
+          wrap.appendChild(ph);
+
+          pagesEl.appendChild(wrap);
+        }
+      }
+
+      // Lazy render pages when they enter/near viewport
+      let pageObserver = null;
+
+      function ensureObserver(){
+        if (pageObserver) pageObserver.disconnect();
+
+        const thresholds = [0, 0.25, 0.5, 0.75, 1];
+        const visibleRatio = new Map(); // pageNumber -> ratio
+
+        pageObserver = new IntersectionObserver((entries)=>{
+          // Render near-visible pages
+          entries.forEach((entry)=>{
+            const wrap = entry.target;
+            const pageNum = parseInt(wrap.dataset.pageNumber || '1', 10);
+
+            // Update visibility tracking for "current page" display
+            visibleRatio.set(pageNum, entry.isIntersecting ? entry.intersectionRatio : 0);
+
+            // Render if close enough
+            if (entry.isIntersecting) {
+              renderPageInto(wrap, pageNum);
+            }
+          });
+
+          // Determine "current page" by max visibility ratio
+          if (!state.typing && pdfDoc) {
+            let bestPage = state.current;
+            let bestRatio = -1;
+
+            visibleRatio.forEach((ratio, pageNum)=>{
+              if (ratio > bestRatio) {
+                bestRatio = ratio;
+                bestPage = pageNum;
+              }
+            });
+
+            if (bestRatio >= 0 && bestPage !== state.current) {
+              state.current = bestPage;
+              pageNumberInput.value = String(bestPage);
+              updateButtons();
+            }
+          }
+        }, {
+          root: viewer,
+          rootMargin: '800px 0px',  // preload ahead/behind
+          threshold: thresholds,
+        });
+
+        pagesEl.querySelectorAll('.page').forEach(el => pageObserver.observe(el));
+      }
+
+      function renderPageInto(wrap, num){
+        if (!pdfDoc) return;
+        if (wrap.dataset.rendered === '1') return;
+        if (wrap.dataset.rendering === '1') return;
+
+        const genAtStart = wrap.dataset.gen;
+        if (String(state.generation) !== String(genAtStart)) return;
+
+        wrap.dataset.rendering = '1';
 
         pdfDoc.getPage(num).then(page=>{
-          if (num===1 && scale === 'auto') {
+          // If generation changed while awaiting, stop
+          if (String(state.generation) !== String(genAtStart)) return;
+
+          // Auto-fit on first actual page load
+          if (isAutoScale) {
             const v1 = page.getViewport({ scale: 1 });
             scale = fitToWidth(v1.width);
-            updateZoom();
+            updateZoomLabel();
+            isAutoScale = false; // auto-fit done once (but resize handler may re-auto if you want)
           }
-          const viewport = page.getViewport({ scale: typeof scale==='number'? scale : 1 });
-          const wrap = document.createElement('div');
-          wrap.className='page';
+
+          const viewport = page.getViewport({ scale: scale || 1 });
+
           const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+
+          // Replace placeholder with canvas
+          wrap.innerHTML = '';
           wrap.appendChild(canvas);
 
-          viewer.innerHTML='';
-          viewer.appendChild(wrap);
-
-          const ctx = canvas.getContext('2d', {alpha:false});
-          return page.render({canvasContext:ctx, viewport}).promise;
+          const ctx = canvas.getContext('2d', { alpha:false });
+          return page.render({ canvasContext: ctx, viewport }).promise;
         }).then(()=>{
-          state.rendering=false;
-          pageNumberInput.value=num;
-          state.current=num;
-          updateButtons();
+          if (String(state.generation) !== String(genAtStart)) return;
+
+          wrap.dataset.rendered = '1';
+          wrap.dataset.rendering = '0';
 
           if (!state.firstPaint){
             state.firstPaint = true;
             hideOverlay();
           }
-
-          if (state.pending){ const p=state.pending; state.pending=null; renderPage(p); }
-        }).catch(err => {
-          state.rendering = false;
+        }).catch(err=>{
+          wrap.dataset.rendering = '0';
           msg.classList.add('text-danger');
           msg.textContent = `Error rendering page ${num}: ${err.message}`;
           hideOverlay();
         });
-      };
+      }
 
-      const updateButtons = () => {
+      // Full rebuild at a new scale (keeps scroll position by snapping to current page)
+      function rebuildAtCurrentScale(){
         if (!pdfDoc) return;
-        prevBtn.disabled = state.current <= 1;
-        nextBtn.disabled = state.current >= pdfDoc.numPages;
-      };
+        const keep = state.current;
 
-      const queueRender = (n)=>{ 
-        if (n < 1 || (pdfDoc && n > pdfDoc.numPages)) return;
-        state.rendering ? state.pending=n : renderPage(n);
-      };
+        buildPlaceholders();
+        ensureObserver();
 
-      const updateZoom = ()=>{ 
-        zoomLabel.textContent = Math.round((typeof scale==='number'? scale:1)*100)+'%';
-      };
+        // Snap to current page after DOM rebuild
+        setTimeout(()=> scrollToPage(keep, 'auto'), 0);
+
+        pageNumberInput.max = pdfDoc.numPages;
+        pageCountSpan.textContent = pdfDoc.numPages;
+        pageNumberInput.value = String(keep);
+        updateButtons();
+      }
 
       fetch(RAW_URL, { credentials:'same-origin', headers:{ 'Accept':'application/pdf' } })
         .then(async r => {
@@ -350,8 +492,20 @@
           pdfDoc = doc;
           pageCountSpan.textContent = doc.numPages;
           pageNumberInput.max = doc.numPages;
-          scale = 'auto';
-          renderPage(1);
+
+          // Start in auto-fit (we compute from page 1 once it loads)
+          isAutoScale = true;
+
+          buildPlaceholders();
+          ensureObserver();
+
+          // kick: render page 1 immediately (so overlay hides fast)
+          const first = pagesEl.querySelector('[data-page-number="1"]');
+          if (first) renderPageInto(first, 1);
+
+          state.current = 1;
+          pageNumberInput.value = '1';
+          updateButtons();
         })
         .catch(err=>{
           msg.classList.add('text-danger');
@@ -359,35 +513,55 @@
           hideOverlay();
         });
 
-      zoomInBtn.addEventListener('click', ()=>{ if (!pdfDoc) return;
-        if (scale === 'auto') scale = 1.1;
-        scale = Math.min(maxScale, (scale||1)+step); updateZoom(); queueRender(state.current);
-      });
-      zoomOutBtn.addEventListener('click', ()=>{ if (!pdfDoc) return;
-        if (scale === 'auto') scale = 1.0;
-        scale = Math.max(minScale, (scale||1)-step); updateZoom(); queueRender(state.current);
-      });
-      prevBtn.addEventListener('click', ()=>{ if (pdfDoc && state.current > 1) queueRender(state.current-1); });
-      nextBtn.addEventListener('click', ()=>{ if (pdfDoc && state.current < pdfDoc.numPages) queueRender(state.current+1); });
-      pageNumberInput.addEventListener('change', ()=>{ if (!pdfDoc) return;
-        let n = parseInt(pageNumberInput.value||'1', 10);
-        n = Math.min(Math.max(1, n), pdfDoc.numPages);
-        queueRender(n);
+      // Controls
+      zoomInBtn.addEventListener('click', ()=>{
+        if (!pdfDoc) return;
+        isAutoScale = false;
+        scale = Math.min(maxScale, (scale||1) + step);
+        updateZoomLabel();
+        rebuildAtCurrentScale();
       });
 
-      // Responsive fit
+      zoomOutBtn.addEventListener('click', ()=>{
+        if (!pdfDoc) return;
+        isAutoScale = false;
+        scale = Math.max(minScale, (scale||1) - step);
+        updateZoomLabel();
+        rebuildAtCurrentScale();
+      });
+
+      prevBtn.addEventListener('click', ()=>{
+        if (!pdfDoc) return;
+        scrollToPage(state.current - 1);
+      });
+
+      nextBtn.addEventListener('click', ()=>{
+        if (!pdfDoc) return;
+        scrollToPage(state.current + 1);
+      });
+
+      pageNumberInput.addEventListener('focus', ()=>{ state.typing = true; });
+      pageNumberInput.addEventListener('blur', ()=>{ state.typing = false; });
+
+      pageNumberInput.addEventListener('change', ()=>{
+        if (!pdfDoc) return;
+        let n = parseInt(pageNumberInput.value||'1', 10);
+        n = Math.min(Math.max(1, n), pdfDoc.numPages);
+        state.current = n;
+        updateButtons();
+        scrollToPage(n);
+      });
+
+      // Responsive refit: if user never manually zoomed, keep fit on resize
       let resizeTimer = null;
       window.addEventListener('resize', ()=>{
         if (!pdfDoc) return;
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(()=>{
-          pdfDoc.getPage(state.current).then(p=>{
-            const v1 = p.getViewport({ scale: 1 });
-            scale = fitToWidth(v1.width);
-            updateZoom();
-            queueRender(state.current);
-          });
-        }, 150);
+          // If you want resize to re-fit always, set isAutoScale=true here.
+          // We'll keep the current scale, but still rebuild so canvases stay crisp.
+          rebuildAtCurrentScale();
+        }, 180);
       });
     }
 

@@ -1,0 +1,252 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Adviser Management | CapstoneVault{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0 px-md-2">
+
+  <!-- Page Header -->
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+      <h4 class="mb-1 fw-bold">Adviser Management</h4>
+      <small class="text-muted">Add, search, edit, and delete advisers used in the Upload Capstone dropdown.</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary rounded-pill">
+        <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Add Adviser -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-0 p-4">
+          <div class="d-flex align-items-center">
+            <div class="me-3 d-flex align-items-center justify-content-center rounded-3"
+                 style="width:42px;height:42px;background:#eef3ff;">
+              <i class="bi bi-person-plus text-primary fs-4"></i>
+            </div>
+            <div>
+              <h6 class="mb-0 fw-bold">Add Adviser</h6>
+              <small class="text-muted">Fill out the adviser name details.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body p-4">
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger border-0 shadow-sm rounded-3">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">First Name</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small mt-1">{{ form.first_name.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Last Name</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="text-danger small mt-1">{{ form.last_name.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 rounded-pill">
+              <i class="bi bi-plus-circle me-2"></i>Add Adviser
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adviser List -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-0 p-4">
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center">
+              <div class="me-3 d-flex align-items-center justify-content-center rounded-3"
+                   style="width:42px;height:42px;background:#f6f7fb;">
+                <i class="bi bi-person-badge text-dark fs-4"></i>
+              </div>
+              <div>
+                <h6 class="mb-0 fw-bold">Advisers</h6>
+                <small class="text-muted">
+                  {% if q %}Search results for “{{ q }}”{% else %}All advisers{% endif %}
+                </small>
+              </div>
+            </div>
+
+            <!-- Search (slightly bigger + cleaner alignment) -->
+            <form method="GET"
+                  class="d-flex align-items-center gap-2 ms-md-auto"
+                  style="max-width: 420px; width: 100%;">
+              <div class="input-group input-group-sm flex-nowrap" style="min-width: 0;">
+                <span class="input-group-text bg-white border-end-0 px-3">
+                  <i class="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  name="q"
+                  value="{{ q }}"
+                  class="form-control border-start-0 py-2"
+                  placeholder="Search by first/last name..."
+                  style="min-width: 0;"
+                />
+              </div>
+
+              <button class="btn btn-outline-primary rounded-pill px-3 py-2 flex-shrink-0" type="submit">
+                Search
+              </button>
+
+              {% if q %}
+                <a href="{% url 'adviser_management' %}" class="btn btn-outline-secondary rounded-pill px-3 py-2 flex-shrink-0">
+                  Clear
+                </a>
+              {% endif %}
+            </form>
+          </div>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="ps-4">Name</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for adviser in advisers %}
+                <tr>
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                      <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                           style="width:38px;height:38px;background:#eef3ff;">
+                        <i class="bi bi-person text-primary"></i>
+                      </div>
+                      <div>
+                        <div class="fw-semibold">{{ adviser.last_name }}, {{ adviser.first_name }}</div>
+                        <div class="small text-muted">ID: {{ adviser.id }}</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Actions aligned (same height, consistent baseline) -->
+                  <td class="text-end pe-4">
+                    <div class="d-inline-flex align-items-center gap-2">
+                      <a href="{% url 'edit_adviser' adviser.id %}"
+                         class="btn btn-sm btn-outline-primary rounded-pill d-inline-flex align-items-center"
+                         style="height:34px;">
+                        <i class="bi bi-pencil-square me-1"></i><span>Edit</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger rounded-pill d-inline-flex align-items-center"
+                        style="height:34px;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteAdviserModal{{ adviser.id }}"
+                      >
+                        <i class="bi bi-trash me-1"></i><span>Delete</span>
+                      </button>
+                    </div>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteAdviserModal{{ adviser.id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow rounded-4">
+                          <div class="modal-header border-0">
+                            <h5 class="modal-title fw-bold">Delete Adviser</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <p class="mb-0">
+                              Are you sure you want to delete
+                              <span class="fw-semibold">{{ adviser.first_name }} {{ adviser.last_name }}</span>?
+                            </p>
+                            <small class="text-muted">This will remove the adviser from the dropdown list.</small>
+                          </div>
+                          <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
+                              Cancel
+                            </button>
+                            <form method="POST" action="{% url 'delete_adviser' adviser.id %}">
+                              {% csrf_token %}
+                              <button type="submit" class="btn btn-danger rounded-pill">
+                                <i class="bi bi-trash me-2"></i>Delete
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center p-5">
+                    <div class="text-muted">
+                      <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                      No advisers found.
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer bg-white border-0 p-3">
+          <nav>
+            <ul class="pagination justify-content-center mb-0">
+
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
+              </li>
+              {% else %}
+              <li class="page-item disabled"><span class="page-link">Previous</span></li>
+              {% endif %}
+
+              <li class="page-item disabled">
+                <span class="page-link">
+                  Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+              </li>
+
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}">Next</a>
+              </li>
+              {% else %}
+              <li class="page-item disabled"><span class="page-link">Next</span></li>
+              {% endif %}
+
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

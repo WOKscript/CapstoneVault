@@ -18,7 +18,7 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="text-white mb-1 small text-uppercase fw-semibold">Total Papers</h6>
-                <h3 class="mb-0 fw-bold text-white">{{ total_papers }}</h3>
+                <h3 class="mb-0 fw-bold text-white">{{ total_papers|default:0 }}</h3>
                 <p class="mb-0 small text-white">Published capstones</p>
               </div>
               <div class="fs-1 text-white" style="opacity: 0.15;">
@@ -38,7 +38,7 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="text-white mb-1 small text-uppercase fw-semibold">Verified Users</h6>
-                <h3 class="mb-0 fw-bold text-white">{{ verified_users }}</h3>
+                <h3 class="mb-0 fw-bold text-white">{{ verified_users|default:0 }}</h3>
                 <p class="mb-0 small text-white">Active accounts</p>
               </div>
               <div class="fs-1 text-white" style="opacity: 0.15;">
@@ -58,7 +58,7 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="text-white mb-1 small text-uppercase fw-semibold">Access Requests</h6>
-                <h3 class="mb-0 fw-bold text-white">{{ pending_requests }}</h3>
+                <h3 class="mb-0 fw-bold text-white">{{ pending_requests|default:0 }}</h3>
                 <p class="mb-0 small text-white">Pending approval</p>
               </div>
               <div class="fs-1 text-white" style="opacity: 0.15;">
@@ -70,7 +70,7 @@
       </a>
     </div>
 
-    <!-- Audit Logs -->
+    <!-- Audit Logs (TOTAL ONLY) -->
     <div class="col-xl-3 col-md-6">
       <a href="{% url 'audit_logs' %}" class="text-decoration-none">
         <div class="card border-0 shadow-sm h-100 bg-primary hover-lift">
@@ -78,8 +78,8 @@
             <div class="d-flex align-items-center justify-content-between">
               <div>
                 <h6 class="text-white mb-1 small text-uppercase fw-semibold">Audit Logs</h6>
-                <h3 class="mb-0 fw-bold text-white">{{ session_logs }}</h3>
-                <p class="mb-0 small text-white">System activities</p>
+                <h3 class="mb-0 fw-bold text-white">{{ total_logs|default:0 }}</h3>
+                <p class="mb-0 small text-white">All time records</p>
               </div>
               <div class="fs-1 text-white" style="opacity: 0.15;">
                 <i class="bi bi-clock-history"></i>
@@ -147,12 +147,10 @@
 .hover-lift {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .hover-lift:hover {
   transform: translateY(-3px);
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
 }
-
 .admin-dashboard .card {
   border-radius: 0.5rem;
 }
@@ -163,21 +161,18 @@
 
 <script>
 (function () {
-  // Helper functions
   async function fetchJSON(url) {
     const res = await fetch(url, { credentials: 'same-origin' });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }
 
-  // Academic year utility
   const AY_START_MONTH = 8;
   function ayFor(date) {
     const y = date.getFullYear(), m = date.getMonth() + 1;
     return (m >= AY_START_MONTH) ? `${y}-${y + 1}` : `${y - 1}-${y}`;
   }
 
-  // Build AY list: current + previous 4
   const currentAY = ayFor(new Date());
   const ayList = [];
   for (let i = 0; i < 5; i++) {
@@ -185,7 +180,6 @@
     ayList.push(`${base}-${base + 1}`);
   }
 
-  // Read EVSU palette from CSS variables
   const rootStyles     = getComputedStyle(document.documentElement);
   const cCrimson       = rootStyles.getPropertyValue('--evsu-crimson').trim()       || '#8b1a1a';
   const cDarkCrimson   = rootStyles.getPropertyValue('--evsu-dark-crimson').trim()  || '#5c0f0f';
@@ -195,16 +189,13 @@
 
   const chartColors = [cCrimson, cLightCrimson, cGold, cMutedGray];
 
-  // Elements
   const elMiniYearly   = document.querySelector("#miniYearly");
   const elMiniCategory = document.querySelector("#miniCategory");
   const elMiniMostAcc  = document.querySelector("#miniMostAccessed");
   const elMiniAyLabel  = document.querySelector("#miniAyLabel");
 
-  // Yearly + Category Charts
   fetchJSON("{% url 'trends_api' %}")
     .then(data => {
-      // Yearly Output (donut)
       if (elMiniYearly) {
         new ApexCharts(elMiniYearly, {
           chart: { type: 'donut', height: 220 },
@@ -215,31 +206,15 @@
           dataLabels: { enabled: true, style: { fontSize: '12px' } },
           stroke: { width: 1, colors: ['#ffffff'] },
           plotOptions: {
-            pie: {
-              donut: {
-                size: '65%',
-                labels: {
-                  show: true,
-                  total: {
-                    show: true,
-                    label: 'Total',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: cDarkCrimson
-                  }
-                }
-              }
-            }
+            pie: { donut: { size: '65%', labels: { show: true, total: {
+              show: true, label: 'Total', fontSize: '14px', fontWeight: 600, color: cDarkCrimson
+            }}}}
           }
         }).render();
       }
 
-      // Category Trend (line)
       if (elMiniCategory) {
-        const seriesColors = data.stackedByCategory.series.map((_, idx) => {
-          return chartColors[idx % chartColors.length];
-        });
-
+        const seriesColors = data.stackedByCategory.series.map((_, idx) => chartColors[idx % chartColors.length]);
         new ApexCharts(elMiniCategory, {
           chart: { type: 'line', height: 220, toolbar: { show: false } },
           series: data.stackedByCategory.series.map(s => ({ name: s.name, data: s.data })),
@@ -254,11 +229,9 @@
     })
     .catch(err => console.error('trends_api error:', err));
 
-  // Most Accessed Papers
   async function renderMostAccessedForAY(ay) {
     const d = await fetchJSON("{% url 'most_accessed_api' %}?ay=" + encodeURIComponent(ay));
     const papers = d.topPapers || [];
-
     if (!papers.length) return false;
 
     const labels = papers.map(p => p.title.length > 25 ? p.title.slice(0, 25) + '...' : p.title);
@@ -271,20 +244,12 @@
       series: [{ name: 'Views', data: views }],
       xaxis: { categories: labels },
       colors: [cCrimson],
-      plotOptions: { 
-        bar: { 
-          horizontal: true, 
-          borderRadius: 4,
-          barHeight: '70%'
-        } 
-      },
+      plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '70%' } },
       dataLabels: { enabled: false },
       grid: { borderColor: '#f1f1f1' },
       tooltip: {
         y: { formatter: v => v + ' views' },
-        x: {
-          formatter: (val, { dataPointIndex }) => papers[dataPointIndex]?.title || val
-        }
+        x: { formatter: (val, { dataPointIndex }) => papers[dataPointIndex]?.title || val }
       }
     }).render();
 

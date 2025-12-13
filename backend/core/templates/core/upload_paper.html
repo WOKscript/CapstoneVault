@@ -15,7 +15,7 @@
 
     <div class="card-body p-4 upload-form-body">
       {% if form.errors %}
-        <div class="alert alert-danger border-0 shadow-sm mb-4">
+        <div class="alert alert-danger border-0 shadow-sm mb-4 rounded-3">
           <h6 class="mb-2 fw-semibold">
             <i class="bi bi-exclamation-triangle me-2"></i>
             Please correct the following errors:
@@ -28,12 +28,14 @@
         </div>
       {% endif %}
 
-      <!-- FORM: fields unchanged -->
-      <form method="POST" enctype="multipart/form-data">
+      <!-- FORM -->
+      <form method="POST" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
 
         <div class="mb-3">
-          <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold">Title</label>
+          <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold">
+            Title <span class="text-danger">*</span>
+          </label>
           {{ form.title|add_class:"form-control" }}
           {% if form.title.errors %}
             <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
@@ -43,7 +45,9 @@
         </div>
 
         <div class="mb-3">
-          <label for="{{ form.abstract.id_for_label }}" class="form-label fw-semibold">Abstract</label>
+          <label for="{{ form.abstract.id_for_label }}" class="form-label fw-semibold">
+            Abstract <span class="text-danger">*</span>
+          </label>
           {{ form.abstract|add_class:"form-control" }}
           {% if form.abstract.errors %}
             <div class="text-danger small mt-1">{{ form.abstract.errors.0 }}</div>
@@ -55,7 +59,9 @@
         <div class="row g-3">
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.authors.id_for_label }}" class="form-label fw-semibold">Authors</label>
+              <label for="{{ form.authors.id_for_label }}" class="form-label fw-semibold">
+                Authors <span class="text-danger">*</span>
+              </label>
               {{ form.authors|add_class:"form-control" }}
               {% if form.authors.errors %}
                 <div class="text-danger small mt-1">{{ form.authors.errors.0 }}</div>
@@ -64,27 +70,59 @@
               {% endif %}
             </div>
           </div>
+
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="{{ form.instructor.id_for_label }}" class="form-label fw-semibold">Instructor</label>
-              {{ form.instructor|add_class:"form-control" }}
-              {% if form.instructor.errors %}
-                <div class="text-danger small mt-1">{{ form.instructor.errors.0 }}</div>
+              <label for="{{ form.adviser.id_for_label }}" class="form-label fw-semibold">
+                Adviser <span class="text-danger">*</span>
+              </label>
+
+              <div class="input-group">
+                <span class="input-group-text bg-white">
+                  <i class="bi bi-person-badge"></i>
+                </span>
+                {{ form.adviser|add_class:"form-select" }}
+              </div>
+
+              {% if form.adviser.errors %}
+                <div class="text-danger small mt-1">{{ form.adviser.errors.0 }}</div>
+              {% else %}
+                <div class="form-text">Select the adviser name from the list.</div>
               {% endif %}
             </div>
           </div>
         </div>
 
+        <!-- Dynamic Publication Year dropdown (current year down to min year) -->
         <div class="mb-3">
-          <label for="{{ form.publication_year.id_for_label }}" class="form-label fw-semibold">Publication Year</label>
-          {{ form.publication_year|add_class:"form-select" }}
+          <label for="{{ form.publication_year.id_for_label }}" class="form-label fw-semibold">
+            Publication Year <span class="text-danger">*</span>
+          </label>
+
+          <div class="input-group">
+            <span class="input-group-text bg-white">
+              <i class="bi bi-calendar3"></i>
+            </span>
+            <select
+              name="{{ form.publication_year.html_name }}"
+              id="{{ form.publication_year.id_for_label }}"
+              class="form-select{% if form.publication_year.errors %} is-invalid{% endif %}"
+            >
+              <!-- Options injected by JS -->
+            </select>
+          </div>
+
           {% if form.publication_year.errors %}
             <div class="text-danger small mt-1">{{ form.publication_year.errors.0 }}</div>
+          {% else %}
+            <div class="form-text">Auto-updates every year (current year to older years).</div>
           {% endif %}
         </div>
 
         <div class="mb-3">
-          <label for="{{ form.file.id_for_label }}" class="form-label fw-semibold">PDF File</label>
+          <label for="{{ form.file.id_for_label }}" class="form-label fw-semibold">
+            PDF File <span class="text-danger">*</span>
+          </label>
           {{ form.file|add_class:"form-control" }}
           {% if form.file.errors %}
             <div class="text-danger small mt-1">{{ form.file.errors.0 }}</div>
@@ -92,13 +130,25 @@
           <div class="form-text">Upload a PDF file (max 20MB).</div>
         </div>
 
-        <div class="d-flex gap-2 upload-actions">
+        <div class="d-flex flex-wrap gap-2 upload-actions">
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-upload me-1"></i>Upload Paper
           </button>
-          <a href="{% url 'verified_dashboard' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Cancel
-          </a>
+
+          {# Cancel goes back depending on role #}
+          {% if request.user.userprofile.role == 'admin' %}
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+          {% elif request.user.userprofile.role == 'instructor' %}
+            <a href="{% url 'instructor_dashboard' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+          {% else %}
+            <a href="{% url 'verified_dashboard' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i>Cancel
+            </a>
+          {% endif %}
         </div>
       </form>
     </div>
@@ -106,57 +156,101 @@
 </div>
 
 <style>
-  .upload-card {
-    border-radius: 0.75rem;
+  .upload-card{
+    border-radius: 0.85rem;
     box-shadow: var(--shadow-md, 0 10px 25px rgba(15, 23, 42, 0.12));
     background: var(--bg-primary, #ffffff);
   }
 
   /* solid crimson header (no gradient) */
-  .upload-header {
+  .upload-header{
     background: var(--evsu-crimson, #b80a0a);
     border-bottom: 0;
     padding: 1rem 1.5rem;
   }
 
-  .upload-header h5 {
-    letter-spacing: 0.3px;
-  }
-
-  .upload-form-body .form-label {
+  .upload-form-body .form-label{
     letter-spacing: 0.2px;
     color: #0f172a;
   }
 
   .upload-form-body .form-control,
-  .upload-form-body .form-select {
-    border-radius: 0.5rem;
+  .upload-form-body .form-select,
+  .upload-form-body .input-group-text{
+    border-radius: 0.6rem;
     border-color: #e2e8f0;
   }
 
+  .upload-form-body .input-group .input-group-text{
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .upload-form-body .input-group .form-select{
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
   .upload-form-body .form-control:focus,
-  .upload-form-body .form-select:focus {
+  .upload-form-body .form-select:focus{
     border-color: var(--evsu-crimson, #b80a0a);
     box-shadow: 0 0 0 0.15rem rgba(184, 10, 10, 0.18);
   }
 
-  .upload-actions .btn {
-    border-radius: 0.5rem;
+  .upload-actions .btn{
+    border-radius: 0.6rem;
   }
 
-  .upload-actions .btn-primary {
+  .upload-actions .btn-primary{
     background: var(--evsu-crimson, #b80a0a);
     border: none;
-    box-shadow: 0 0.6rem 1.4rem rgba(184, 10, 10, 0.35);
+    box-shadow: 0 0.6rem 1.4rem rgba(184, 10, 10, 0.30);
   }
 
-  .upload-actions .btn-primary:hover {
+  .upload-actions .btn-primary:hover{
     background: #a10909;
-    box-shadow: 0 0.9rem 2rem rgba(107, 5, 5, 0.45);
+    box-shadow: 0 0.9rem 2rem rgba(107, 5, 5, 0.40);
   }
 
-  .upload-actions .btn-outline-secondary {
+  .upload-actions .btn-outline-secondary{
     border-radius: 999px;
   }
 </style>
+
+<script>
+  (function () {
+    // Publication Year options: currentYear down to minYear
+    const select = document.getElementById("{{ form.publication_year.id_for_label }}");
+    if (!select) return;
+
+    const currentYear = new Date().getFullYear();
+    const minYear = 2000;
+
+    // keep POSTed value (when form has errors) or initial value
+    const existingValue = "{{ form.publication_year.value|default_if_none:'' }}";
+
+    // clear
+    select.innerHTML = "";
+
+    // placeholder
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select year";
+    select.appendChild(placeholder);
+
+    for (let year = currentYear; year >= minYear; year--) {
+      const opt = document.createElement("option");
+      opt.value = String(year);
+      opt.textContent = String(year);
+
+      if (existingValue) {
+        if (String(existingValue) === String(year)) opt.selected = true;
+      } else {
+        // if no existing value yet, default to current year
+        if (year === currentYear) opt.selected = true;
+      }
+
+      select.appendChild(opt);
+    }
+  })();
+</script>
 {% endblock %}

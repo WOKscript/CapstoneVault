@@ -19,6 +19,20 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.role}"
 
+
+# ADVISER (Admin-managed dropdown source)
+class Adviser(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name  = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ("first_name", "last_name")
+        ordering = ["last_name", "first_name"]
+
+    def __str__(self):
+        return f"{self.last_name}, {self.first_name}"
+
+
 # CATEGORY
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -32,6 +46,7 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+
 # SUBCATEGORY
 class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
@@ -43,12 +58,14 @@ class SubCategory(models.Model):
     def __str__(self):
         return f"{self.name} ({self.category.name})"
 
+
 # TAG
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
+
 
 # CAPSTONE PAPER
 class CapstonePaper(models.Model):
@@ -60,8 +77,8 @@ class CapstonePaper(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     publication_year = models.IntegerField(null=True, blank=True)
 
-    # kept for filters/search
-    instructor = models.CharField(max_length=255, blank=True, null=True)
+    # Adviser dropdown (managed in admin)
+    adviser = models.ForeignKey(Adviser, on_delete=models.SET_NULL, null=True, blank=True)
 
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     subcategory = models.ForeignKey(SubCategory, on_delete=models.SET_NULL, null=True, blank=True)
@@ -69,6 +86,7 @@ class CapstonePaper(models.Model):
 
     def __str__(self):
         return self.title
+
 
 class PaperAccessRequest(models.Model):
     STATUS_CHOICES = [
@@ -87,7 +105,7 @@ class PaperAccessRequest(models.Model):
 
     # Expiry support
     approved_at = models.DateTimeField(null=True, blank=True)
-    expires_at  = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -107,6 +125,7 @@ class PaperAccessRequest(models.Model):
             and self.expires_at >= timezone.now()
         )
 
+
 # Real view events for trends by School Year
 class PaperViewEvent(models.Model):
     paper = models.ForeignKey(CapstonePaper, on_delete=models.CASCADE, related_name='view_events')
@@ -122,6 +141,7 @@ class PaperViewEvent(models.Model):
 
     def __str__(self):
         return f"View p#{self.paper_id} @ {self.ay}"
+
 
 class AuditLog(models.Model):
     ACTION_CHOICES = [
@@ -139,13 +159,20 @@ class AuditLog(models.Model):
         ('access_granted', 'Access Granted'),
         ('access_denied', 'Access Denied'),
         ('upload_permission_changed', 'Upload Permission Changed'),
+        ('support_request', 'Support Request'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs_performed')
     action = models.CharField(max_length=50, choices=ACTION_CHOICES)
     description = models.TextField()
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    target_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs_received')
+    target_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs_received'
+    )
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
