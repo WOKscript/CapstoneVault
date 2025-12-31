@@ -3,6 +3,7 @@ import os
 import socket
 import dj_database_url
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 # ===== Base setup =====
 BASE_DIR = Path(__file__).resolve().parent.parent  # points to /backend
@@ -78,24 +79,46 @@ TEMPLATES = [
 
 # ===== Database (auto-switch between local & Render) =====
 LOCAL_DB_URL = "postgresql://postgres:1234@localhost:5432/capstonevault_db"
-RENDER_DB_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# FIXED: disable SSL locally, enable SSL only for Render
-if RENDER_DB_URL and "onrender" in socket.gethostname():
-    print("🔗 Using Render PostgreSQL database (SSL enabled).")
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=RENDER_DB_URL, conn_max_age=600, ssl_require=True
-        )
-    }
+# Render sets these automatically for web services / static sites
+IS_RENDER = bool(os.getenv("RENDER_EXTERNAL_HOSTNAME") or os.getenv("RENDER_EXTERNAL_URL"))
+
+if DATABASE_URL:
+    # Helpful log (safe): shows host only, not password
+    try:
+        print("🧩 DATABASE_URL host:", urlparse(DATABASE_URL).hostname)
+    except Exception:
+        pass
+
+    if IS_RENDER:
+        print("🔗 Using Render PostgreSQL (SSL enabled).")
+        DATABASES = {
+            "default": dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600,
+                ssl_require=True,
+            )
+        }
+    else:
+        # Local machine but DATABASE_URL provided (optional)
+        print("💾 Using DATABASE_URL locally (no SSL).")
+        DATABASES = {
+            "default": dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=0,
+                ssl_require=False,
+            )
+        }
 else:
-    print("💾 Using local PostgreSQL database (no SSL).")
+    print("💾 Using local PostgreSQL fallback (no SSL).")
     DATABASES = {
         "default": dj_database_url.config(
-            default=LOCAL_DB_URL, conn_max_age=0, ssl_require=False
+            default=LOCAL_DB_URL,
+            conn_max_age=0,
+            ssl_require=False,
         )
     }
-
 # ===== Static and Media =====
 # Since manage.py is inside /backend, BASE_DIR = /backend
 STATIC_URL = "/static/"
