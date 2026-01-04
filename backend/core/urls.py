@@ -22,7 +22,7 @@ urlpatterns = [
     path("users/<int:user_id>/toggle/", views.toggle_user_status, name="toggle_user_status"),
     path("users/<int:user_id>/reset-password/", views.reset_user_password, name="reset_user_password"),
 
-    # ✅ Adviser Management (Admin)
+    # Adviser Management (Admin)
     path("advisers/", views.adviser_management_view, name="adviser_management"),
     path("advisers/<int:adviser_id>/edit/", views.adviser_edit_view, name="edit_adviser"),
     path("advisers/<int:adviser_id>/delete/", views.adviser_delete_view, name="delete_adviser"),
@@ -88,4 +88,6 @@ urlpatterns = [
         auth_views.PasswordResetCompleteView.as_view(template_name="core/password_reset_complete.html"),
         name="password_reset_complete",
     ),
+    
+    path("about/", views.about_system, name="about_system"),
 ]

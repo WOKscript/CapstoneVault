@@ -1,0 +1,283 @@
+{% extends "core/base.html" %}
+
+{% block title %}About the System - CapstoneVault{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0 px-md-2">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+      <h3 class="mb-1 fw-bold text-primary">About the System</h3>
+      <p class="text-muted small mb-0">
+        Learn what CapstoneVault is, why it exists, and how it helps researchers, students, and advisers.
+      </p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'capstones_main' %}" class="btn btn-outline-primary btn-sm rounded-pill">
+        <i class="bi bi-journal-text me-1"></i> Browse Capstones
+      </a>
+      <a href="{% url 'trends_dashboard' %}" class="btn btn-primary btn-sm rounded-pill">
+        <i class="bi bi-graph-up me-1"></i> View Trends
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Overview -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;background:rgba(13,110,253,.10);">
+              <i class="bi bi-info-circle text-primary" style="font-size: 1.3rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="fw-semibold mb-2">What is CapstoneVault?</h5>
+              <p class="text-muted mb-0">
+                CapstoneVault is a web-based repository designed to store, organize, and manage capstone papers in one place.
+                It helps users find relevant studies faster through smart categorization, role-based access, and trend analytics—
+                making the IT e-library more accessible, secure, and useful for future researchers.
+              </p>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border bg-light">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-search text-primary"></i>
+                  <span class="fw-semibold">Faster Discovery</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Search and filter by category, subcategory, year, and keywords to locate papers quickly.
+                </p>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border bg-light">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-shield-lock text-primary"></i>
+                  <span class="fw-semibold">Controlled Access</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Role-based access and request-to-view mechanisms help protect documents and reduce misuse.
+                </p>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border bg-light">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-cpu text-primary"></i>
+                  <span class="fw-semibold">Intelligent Classification</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Papers can be auto-categorized (e.g., using TF-IDF + SVM) to reduce manual sorting.
+                </p>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border bg-light">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-graph-up-arrow text-primary"></i>
+                  <span class="fw-semibold">Research Insights</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Analytics highlight popular topics and trends to guide future capstone directions.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it Works -->
+      <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">How it works (quick flow)</h5>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-cloud-upload text-primary"></i>
+                  <span class="fw-semibold">Upload & Review</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Uploaded papers go through a review/approval flow (Admin/Adviser) before appearing in the repository.
+                </p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-tags text-primary"></i>
+                  <span class="fw-semibold">Categorize & Tag</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  The system assigns categories/tags to improve searching and reduce manual classification.
+                </p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-key text-primary"></i>
+                  <span class="fw-semibold">Request-to-View</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Some users may need to submit a request before viewing full PDFs to protect documents.
+                </p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 rounded-4 border">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <i class="bi bi-bar-chart text-primary"></i>
+                  <span class="fw-semibold">Trends Dashboard</span>
+                </div>
+                <p class="text-muted small mb-0">
+                  Trends summarize what topics are rising by year and category for better decision-making.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roles + Team -->
+    <div class="col-lg-5">
+      <!-- Roles -->
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+          <h5 class="fw-semibold mb-3">User Roles</h5>
+
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:40px;height:40px;background:rgba(220,53,69,.10);">
+              <i class="bi bi-shield-check text-danger"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Admin</div>
+              <div class="text-muted small">
+                Manages users, approvals, logs, requests, and system modules.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:40px;height:40px;background:rgba(25,135,84,.10);">
+              <i class="bi bi-person-badge text-success"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Adviser / Instructor</div>
+              <div class="text-muted small">
+                Reviews submissions, approves papers, and manages upload access for verified users.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:40px;height:40px;background:rgba(13,110,253,.10);">
+              <i class="bi bi-person-check text-primary"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Verified User</div>
+              <div class="text-muted small">
+                Can browse papers and may upload depending on adviser-granted permission.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:40px;height:40px;background:rgba(255,193,7,.15);">
+              <i class="bi bi-person text-warning"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Non-Verified User</div>
+              <div class="text-muted small">
+                Typically limited to abstracts and must request access to view full papers.
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="p-3 rounded-4 border bg-light">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i class="bi bi-lock text-primary"></i>
+              <span class="fw-semibold">Privacy & Security Note</span>
+            </div>
+            <p class="text-muted small mb-0">
+              CapstoneVault supports access control and review workflows to help prevent loss, misuse,
+              and unmanaged distribution of academic documents.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ Developed By -->
+      <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center"
+                 style="width:44px;height:44px;background:rgba(13,110,253,.10);">
+              <i class="bi bi-people-fill text-primary" style="font-size: 1.2rem;"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="fw-semibold mb-1">Developed by CapstoneBoiz</h5>
+              <p class="text-muted small mb-0">
+                The team behind the development, machine learning training, and documentation of CapstoneVault.
+              </p>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:38px;height:38px;background:rgba(13,110,253,.10);">
+              <i class="bi bi-code-slash text-primary"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">John Philip Pacho</div>
+              <div class="text-muted small">Full Stack Developer</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:38px;height:38px;background:rgba(25,135,84,.10);">
+              <i class="bi bi-cpu-fill text-success"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Joshua Andrei Saludo</div>
+              <div class="text-muted small">Machine Learning Trainer & Documentation</div>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:38px;height:38px;background:rgba(255,193,7,.15);">
+              <i class="bi bi-file-earmark-text text-warning"></i>
+            </div>
+            <div>
+              <div class="fw-semibold">Gabriel Angelo Matugas</div>
+              <div class="text-muted small">Documentation and Manuscript</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

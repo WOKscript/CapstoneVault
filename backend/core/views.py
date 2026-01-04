@@ -1737,3 +1737,8 @@ def help_support_view(request):
         },
     ]
     return render(request, "core/help_support.html", {"form": form, "faqs": faqs})
+
+
+# ── about system ─────────────────────────────────────────────────────────
+def about_system(request):
+    return render(request, "core/about_system.html")
