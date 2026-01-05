@@ -72,7 +72,7 @@ class CapstonePaper(models.Model):
     title = models.CharField(max_length=255)
     abstract = models.TextField(blank=True)
     authors = models.CharField(max_length=255, blank=True)
-    file = models.FileField(upload_to='capstone_pdfs/')
+    file = models.FileField(upload_to='capstone_pdfs/', max_length=255)
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     publication_year = models.IntegerField(null=True, blank=True)
